@@ -1,0 +1,473 @@
+{
+    "$ref": "#/definitions/ProjectConfig",
+    "definitions": {
+        "ListOption_Union_str__PathLikeFallback__": {
+            "title": "ListOption[Union[str, PathLikeFallback]]",
+            "description": "List that transparently wraps single values.",
+            "default": [],
+            "type": "array",
+            "items": {
+                "anyOf": [
+                    {
+                        "type": "string"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Any object implementing __fspath__"
+                    }
+                ]
+            }
+        },
+        "PackageablePath": {
+            "title": "PackageablePath",
+            "description": "Path that can be resolved from a python package.",
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "string",
+                    "description": "Any object implementing __fspath__"
+                }
+            ]
+        },
+        "ListOption_PackageablePath_": {
+            "title": "ListOption[PackageablePath]",
+            "description": "List that transparently wraps single values.",
+            "default": [],
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/PackageablePath"
+            }
+        },
+        "PackFilterBlockConfig": {
+            "title": "PackFilterBlockConfig",
+            "description": "Data pack and resource pack filter block configuration.",
+            "type": "object",
+            "properties": {
+                "namespace": {
+                    "title": "Namespace",
+                    "type": "string"
+                },
+                "path": {
+                    "title": "Path",
+                    "type": "string"
+                }
+            }
+        },
+        "ListOption_PackFilterBlockConfig_": {
+            "title": "ListOption[PackFilterBlockConfig]",
+            "description": "List that transparently wraps single values.",
+            "default": [],
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/PackFilterBlockConfig"
+            }
+        },
+        "PackFilterConfig": {
+            "title": "PackFilterConfig",
+            "description": "Data pack and resource pack filter configuration.",
+            "type": "object",
+            "properties": {
+                "block": {
+                    "title": "Block",
+                    "default": {
+                        "__root__": []
+                    },
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/ListOption_PackFilterBlockConfig_"
+                        }
+                    ]
+                }
+            }
+        },
+        "FormatsRangeDict": {
+            "title": "FormatsRangeDict",
+            "type": "object",
+            "properties": {
+                "min_inclusive": {
+                    "title": "Min Inclusive",
+                    "type": "integer"
+                },
+                "max_inclusive": {
+                    "title": "Max Inclusive",
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "min_inclusive",
+                "max_inclusive"
+            ],
+            "additionalProperties": false
+        },
+        "PackOverlayConfig": {
+            "title": "PackOverlayConfig",
+            "description": "Overlay entry configuration.",
+            "type": "object",
+            "properties": {
+                "formats": {
+                    "$ref": "#/definitions/FormatsRangeDict"
+                },
+                "directory": {
+                    "title": "Directory",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "formats",
+                "directory"
+            ]
+        },
+        "ListOption_PackOverlayConfig_": {
+            "title": "ListOption[PackOverlayConfig]",
+            "description": "List that transparently wraps single values.",
+            "default": [],
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/PackOverlayConfig"
+            }
+        },
+        "PackLoadUrl": {
+            "title": "PackLoadUrl",
+            "description": "Url to load pack resources.",
+            "minLength": 1,
+            "maxLength": 2083,
+            "format": "uri",
+            "type": "string"
+        },
+        "ListOption_Union_PackLoadUrl__PackageablePath__": {
+            "title": "ListOption[Union[PackLoadUrl, PackageablePath]]",
+            "description": "List that transparently wraps single values.",
+            "default": [],
+            "type": "array",
+            "items": {
+                "anyOf": [
+                    {
+                        "$ref": "#/definitions/PackLoadUrl"
+                    },
+                    {
+                        "$ref": "#/definitions/PackageablePath"
+                    }
+                ]
+            }
+        },
+        "PackLoadOptions": {
+            "title": "PackLoadOptions",
+            "description": "Options for loading data packs and resource packs.",
+            "default": [],
+            "type": "array",
+            "items": {
+                "anyOf": [
+                    {
+                        "$ref": "#/definitions/PackLoadUrl"
+                    },
+                    {
+                        "$ref": "#/definitions/PackageablePath"
+                    },
+                    {
+                        "type": "object",
+                        "additionalProperties": {
+                            "$ref": "#/definitions/ListOption_Union_PackLoadUrl__PackageablePath__"
+                        }
+                    }
+                ]
+            }
+        },
+        "ListOption_str_": {
+            "title": "ListOption[str]",
+            "description": "List that transparently wraps single values.",
+            "default": [],
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "PackConfig": {
+            "title": "PackConfig",
+            "description": "Data pack and resource pack configuration.",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "title": "Name",
+                    "default": "",
+                    "type": "string"
+                },
+                "description": {
+                    "title": "Description",
+                    "default": "",
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {}
+                        },
+                        {
+                            "type": "object"
+                        }
+                    ]
+                },
+                "pack_format": {
+                    "title": "Pack Format",
+                    "default": 0,
+                    "type": "integer"
+                },
+                "filter": {
+                    "$ref": "#/definitions/PackFilterConfig"
+                },
+                "supported_formats": {
+                    "title": "Supported Formats",
+                    "anyOf": [
+                        {
+                            "type": "integer"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
+                        },
+                        {
+                            "$ref": "#/definitions/FormatsRangeDict"
+                        }
+                    ]
+                },
+                "overlays": {
+                    "$ref": "#/definitions/ListOption_PackOverlayConfig_"
+                },
+                "zipped": {
+                    "title": "Zipped",
+                    "type": "boolean"
+                },
+                "compression": {
+                    "title": "Compression",
+                    "enum": [
+                        "none",
+                        "deflate",
+                        "bzip2",
+                        "lzma"
+                    ],
+                    "type": "string"
+                },
+                "compression_level": {
+                    "title": "Compression Level",
+                    "type": "integer"
+                },
+                "load": {
+                    "title": "Load",
+                    "default": {
+                        "__root__": []
+                    },
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/PackLoadOptions"
+                        }
+                    ]
+                },
+                "render": {
+                    "title": "Render",
+                    "default": {},
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/ListOption_str_"
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "ProjectConfig": {
+            "title": "ProjectConfig",
+            "description": "Beet project configuration.",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "title": "Id",
+                    "default": "",
+                    "type": "string"
+                },
+                "name": {
+                    "title": "Name",
+                    "default": "",
+                    "type": "string"
+                },
+                "description": {
+                    "title": "Description",
+                    "default": "",
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {}
+                        },
+                        {
+                            "type": "object"
+                        }
+                    ]
+                },
+                "author": {
+                    "title": "Author",
+                    "default": "",
+                    "type": "string"
+                },
+                "version": {
+                    "title": "Version",
+                    "default": "",
+                    "type": "string"
+                },
+                "minecraft": {
+                    "title": "Minecraft",
+                    "default": "",
+                    "type": "string"
+                },
+                "directory": {
+                    "title": "Directory",
+                    "default": "",
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "string",
+                            "description": "Any object implementing __fspath__"
+                        }
+                    ]
+                },
+                "broadcast": {
+                    "title": "Broadcast",
+                    "default": {
+                        "__root__": []
+                    },
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/ListOption_Union_str__PathLikeFallback__"
+                        }
+                    ]
+                },
+                "extend": {
+                    "title": "Extend",
+                    "default": {
+                        "__root__": []
+                    },
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/ListOption_PackageablePath_"
+                        }
+                    ]
+                },
+                "output": {
+                    "title": "Output",
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "string",
+                            "description": "Any object implementing __fspath__"
+                        }
+                    ]
+                },
+                "ignore": {
+                    "title": "Ignore",
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "whitelist": {
+                    "title": "Whitelist",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "require": {
+                    "title": "Require",
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "templates": {
+                    "title": "Templates",
+                    "default": {
+                        "__root__": []
+                    },
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/ListOption_PackageablePath_"
+                        }
+                    ]
+                },
+                "data_pack": {
+                    "title": "Data Pack",
+                    "default": {
+                        "name": "",
+                        "description": "",
+                        "pack_format": 0,
+                        "filter": null,
+                        "supported_formats": null,
+                        "overlays": null,
+                        "zipped": null,
+                        "compression": null,
+                        "compression_level": null,
+                        "load": [],
+                        "render": {}
+                    },
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/PackConfig"
+                        }
+                    ]
+                },
+                "resource_pack": {
+                    "title": "Resource Pack",
+                    "default": {
+                        "name": "",
+                        "description": "",
+                        "pack_format": 0,
+                        "filter": null,
+                        "supported_formats": null,
+                        "overlays": null,
+                        "zipped": null,
+                        "compression": null,
+                        "compression_level": null,
+                        "load": [],
+                        "render": {}
+                    },
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/PackConfig"
+                        }
+                    ]
+                },
+                "pipeline": {
+                    "title": "Pipeline",
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "$ref": "#/definitions/ProjectConfig"
+                            }
+                        ]
+                    }
+                },
+                "meta": {
+                    "title": "Meta",
+                    "default": {},
+                    "type": "object"
+                }
+            },
+            "additionalProperties": false
+        }
+    }
+}
