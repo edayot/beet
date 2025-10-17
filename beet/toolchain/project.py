@@ -386,19 +386,16 @@ class ProjectBuilder:
 
             pack.name = ctx.template.render_string(config.name)
             pack.description = ctx.template.render_json(config.description)
-            pack.pack_format = config.pack_format
-            pack.min_format = config.min_format
-            pack.max_format = config.max_format
+            if pack.pack_format is None and pack.min_format is None and pack.max_format is None:
+                pack.pack_format = config.pack_format
+                pack.min_format = config.min_format
+                pack.max_format = config.max_format
             if config.filter:
                 pack.mcmeta.merge(
                     Mcmeta({"filter": config.filter.dict(exclude_none=True)})
                 )
             if config.supported_formats:
                 pack.supported_formats = config.supported_formats
-            if config.min_format:
-                pack.min_format = config.min_format
-            if config.max_format:
-                pack.max_format = config.max_format
             if config.overlays:
                 for overlay in config.overlays.entries():
                     if overlay.formats is not None:
