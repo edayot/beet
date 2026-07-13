@@ -29,7 +29,7 @@ def beet_default(ctx: Context, opts: SnapshotOptions):
 
     all_versions.append(ctx.minecraft_version)
 
-    pack_format = PackFormatRegistry.model_validate_json(path.open("r").read())
+    pack_format = PackFormatRegistry.model_validate_json(path.open().read())
     pack_format_registry.append(pack_format)
     for pack in ctx.packs:
         pack.pack_format_registry.add_format(pack_format)
