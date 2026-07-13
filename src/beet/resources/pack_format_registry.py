@@ -71,8 +71,7 @@ def search_version(version: VersionNumber) -> str:
 
         if max_patch == 0:
             return f"{major}.{minor}"
-        else:
-            return f"{major}.{minor}.{max_patch}"
+        return f"{major}.{minor}.{max_patch}"
     raise KeyError(version)
 
 
