@@ -6,10 +6,13 @@ from beet.contrib.worldgen import worldgen
 from beet.contrib.vanilla import MANIFEST_URL
 from zipfile import ZipFile
 
+
 def test_vanilla_loading(tmp_path: Path):
     cache = Cache(tmp_path)
     manifest = JsonFile(source_path=cache.download(MANIFEST_URL))
-    version = [x for x in manifest.data["versions"] if x["id"] == LATEST_MINECRAFT_VERSION][0]
+    version = [
+        x for x in manifest.data["versions"] if x["id"] == LATEST_MINECRAFT_VERSION
+    ][0]
     version_manifest = JsonFile(source_path=cache.download(version["url"]))
     client = cache.download(version_manifest.data["downloads"]["client"]["url"])
 
@@ -52,10 +55,5 @@ def test_vanilla_loading(tmp_path: Path):
     rp_unknown.remove("gpu_warnlist.json")
     rp_unknown.remove("regional_compliancies.json")
 
-
     assert len(dp_unknown) == 0, dp_unknown
     assert len(rp_unknown) == 0, rp_unknown
-    
-
-
-

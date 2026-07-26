@@ -184,6 +184,7 @@ class CatVariant(JsonFile):
     scope: ClassVar[NamespaceFileScope] = ("cat_variant",)
     extension: ClassVar[str] = ".json"
 
+
 class CatSoundVariant(JsonFile):
     """Class representing a cat sound variant."""
 
@@ -196,6 +197,7 @@ class CowVariant(JsonFile):
 
     scope: ClassVar[NamespaceFileScope] = ("cow_variant",)
     extension: ClassVar[str] = ".json"
+
 
 class CowSoundVariant(JsonFile):
     """Class representing a cow sound variant."""
@@ -238,11 +240,13 @@ class PigVariant(JsonFile):
     scope: ClassVar[NamespaceFileScope] = ("pig_variant",)
     extension: ClassVar[str] = ".json"
 
+
 class PigSoundVariant(JsonFile):
     """Class representing a pig sound variant."""
 
     scope: ClassVar[NamespaceFileScope] = ("pig_sound_variant",)
     extension: ClassVar[str] = ".json"
+
 
 class SulfurCubeArchetype(JsonFile):
     """Class representing a sulfur cube archetype."""
