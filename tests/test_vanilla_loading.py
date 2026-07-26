@@ -7,10 +7,9 @@ from beet.contrib.vanilla import MANIFEST_URL
 from zipfile import ZipFile
 
 def test_vanilla_loading(tmp_path: Path):
-    version = "26.2"
     cache = Cache(tmp_path)
     manifest = JsonFile(source_path=cache.download(MANIFEST_URL))
-    version = [x for x in manifest.data["versions"] if x["id"] == version][0]
+    version = [x for x in manifest.data["versions"] if x["id"] == LATEST_MINECRAFT_VERSION][0]
     version_manifest = JsonFile(source_path=cache.download(version["url"]))
     client = cache.download(version_manifest.data["downloads"]["client"]["url"])
 
