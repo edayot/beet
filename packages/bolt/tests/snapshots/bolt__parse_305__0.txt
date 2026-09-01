@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 #>ERROR  Expected literal 'advancement', literal 'align', literal 'anchored', literal 'append', literal 'as', literal 'at' or 217 other tokens but got literal 'foo'.
+=======
+#>ERROR  Expected literal 'advancement', literal 'align', literal 'anchored', literal 'append', literal 'as', literal 'at' or 224 other tokens but got literal 'foo'.
+>>>>>>> upstream/main
 # line 1, column 11
 #      1 |  as @a run foo = "bar"
 #        :            ^^^
