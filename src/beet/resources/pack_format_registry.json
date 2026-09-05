@@ -1,5 +1,21 @@
 [
   {
+    "id": "26.3",
+    "name": "26.3 Pre-Release 2",
+    "release_target": null,
+    "type": "release",
+    "stable": false,
+    "data_version": 5018,
+    "protocol_version": 1073742158,
+    "data_pack_version": 120,
+    "data_pack_version_minor": 0,
+    "resource_pack_version": 97,
+    "resource_pack_version_minor": 1,
+    "build_time": "2026-09-04T11:52:33+00:00",
+    "release_time": "2026-09-04T11:54:52+00:00",
+    "sha1": "168cea25a2a1cbbcd1a55ea40bf184b7c66a29f3"
+  },
+  {
     "id": "26.2",
     "name": "26.2",
     "release_target": null,
@@ -13,7 +29,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2026-06-16T12:01:27+00:00",
     "release_time": "2026-06-16T12:03:33+00:00",
-    "sha1": "4c3cd3500ce8b9ea104c358a784634fedb2a610f"
+    "sha1": "3592ebc61c6b6c33bb8228fe5a9e90221df0be68"
   },
   {
     "id": "26.1.2",
@@ -29,7 +45,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2026-04-09T10:11:03+00:00",
     "release_time": "2026-04-09T10:12:23+00:00",
-    "sha1": "e3510ae9ff09fba9410cbbb8a02bfd819632155d"
+    "sha1": "0936ffb5a6dd44735578d5785fa4b0022a2df64c"
   },
   {
     "id": "26.1.1",
@@ -45,7 +61,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2026-04-01T09:05:14+00:00",
     "release_time": "2026-04-01T09:06:36+00:00",
-    "sha1": "33b40c956e816614457a1c2a2439ffbb1b4f805f"
+    "sha1": "85b9aa10ec2ecef8f401958f4109b71af164bf38"
   },
   {
     "id": "26.1",
@@ -61,7 +77,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2026-03-24T12:09:43+00:00",
     "release_time": "2026-03-24T12:11:04+00:00",
-    "sha1": "9b85fb6fb95e0df5077402e4e4f67b6c79a551e3"
+    "sha1": "3797316d1961ae0dd7e6f0793e9095b3e814e4a0"
   },
   {
     "id": "1.21.11",
@@ -77,7 +93,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2025-12-09T12:20:42+00:00",
     "release_time": "2025-12-09T12:23:30+00:00",
-    "sha1": "b82922a4f4924a2e92d4806afc040b5bc479d604"
+    "sha1": "a8fbc2763ec360d88eb92a791db7a6f79cdda346"
   },
   {
     "id": "1.21.10",
@@ -93,7 +109,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2025-10-07T09:14:11+00:00",
     "release_time": "2025-10-07T09:17:23+00:00",
-    "sha1": "289dd52cf7a771a77d72f71a497ec6cf9694ded1"
+    "sha1": "8e715471ef8c13b98331db0c186bfa36db1daf09"
   },
   {
     "id": "1.21.9",
@@ -109,7 +125,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2025-09-30T11:55:33+00:00",
     "release_time": "2025-09-30T11:58:43+00:00",
-    "sha1": "3ab249721ad811470b1cd6c55931406029511dbc"
+    "sha1": "1ec02746c2e1b047dfe2962aa2f8a70cfcc14e1f"
   },
   {
     "id": "1.21.8",
@@ -125,7 +141,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2025-07-17T12:00:57+00:00",
     "release_time": "2025-07-17T12:04:02+00:00",
-    "sha1": "59e8c399123860068cd9f838c9a6a820fb23094a"
+    "sha1": "b85dbecef06779de453ae356096e771f1094b1c1"
   },
   {
     "id": "1.21.7",
@@ -141,7 +157,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2025-06-30T09:29:28+00:00",
     "release_time": "2025-06-30T09:32:16+00:00",
-    "sha1": "10dff1dd4c250b113d48c2370574caa22f5d81bd"
+    "sha1": "fa4b24ba8914678db4ef0f08454a98afa4216889"
   },
   {
     "id": "1.21.6",
@@ -157,7 +173,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2025-06-17T11:07:28+00:00",
     "release_time": "2025-06-17T11:10:28+00:00",
-    "sha1": "d55463d67012e2fa7804358ad3fb165bc3952851"
+    "sha1": "3eb2aedf46c4803c3c0b89c373ef435af3f1314c"
   },
   {
     "id": "1.21.5",
@@ -173,7 +189,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2025-03-25T12:11:48+00:00",
     "release_time": "2025-03-25T12:14:58+00:00",
-    "sha1": "983f18e2ae4f6676d70271d7bb0ad48044110519"
+    "sha1": "190bc3d94b6724890d4654a3b17b77eb4ef46de8"
   },
   {
     "id": "1.21.4",
@@ -189,7 +205,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2024-12-03T10:09:48+00:00",
     "release_time": "2024-12-03T10:12:57+00:00",
-    "sha1": "887c8bad5492523a6367ade2442de912771fc8f3"
+    "sha1": "e8e2655909100fda0125c0e370d7425424bb00fc"
   },
   {
     "id": "1.21.3",
@@ -205,7 +221,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2024-10-23T12:25:27+00:00",
     "release_time": "2024-10-23T12:28:15+00:00",
-    "sha1": "59a2700563e4af9de67042db256e5be98224a422"
+    "sha1": "f6542a38f35596dc16eb54cd44c8044030781056"
   },
   {
     "id": "1.21.2",
@@ -221,7 +237,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2024-10-22T09:55:49+00:00",
     "release_time": "2024-10-22T09:58:55+00:00",
-    "sha1": "420597ec77797cebf2e69adf32222856b59c1f29"
+    "sha1": "0e779e59ceac2a889eb6389f111ddd7f09a335cb"
   },
   {
     "id": "1.21.1",
@@ -237,7 +253,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2024-08-08T12:21:55+00:00",
     "release_time": "2024-08-08T12:24:45+00:00",
-    "sha1": "cca4e6ecc1e16e60aab31cdb484b2eb22cb7a656"
+    "sha1": "ca98b8ed4ba12c176a1e75cb5a5555a90cfe0b6c"
   },
   {
     "id": "1.21",
@@ -253,7 +269,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2024-06-13T08:21:21+00:00",
     "release_time": "2024-06-13T08:24:03+00:00",
-    "sha1": "641f50b41a61bf05b2b2b1c2d7c723c8ba67e981"
+    "sha1": "f4a5d9917728e89bcdeb63cba3094d4536a82214"
   },
   {
     "id": "1.20.6",
@@ -269,7 +285,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2024-04-29T12:38:06+00:00",
     "release_time": "2024-04-29T12:40:45+00:00",
-    "sha1": "143a7fae8547b401112dbd1dfb02de82524f4a45"
+    "sha1": "219091b47272eb909a77f4af1daa45429c111152"
   },
   {
     "id": "1.20.5",
@@ -285,7 +301,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2024-04-23T11:51:33+00:00",
     "release_time": "2024-04-23T11:54:12+00:00",
-    "sha1": "495a4c781f2d9739f727b57973979b4e5af9762d"
+    "sha1": "11dc97f3d6028804fb9e3072c4bb4175b21592fd"
   },
   {
     "id": "1.20.4",
@@ -301,7 +317,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2023-12-07T12:53:30+00:00",
     "release_time": "2023-12-07T12:56:20+00:00",
-    "sha1": "7b6d65f98d75a99fbc788bea40ce9044675fd63b"
+    "sha1": "d46f9fa64283a9fca9b8e9a53e785f2ad15793fa"
   },
   {
     "id": "1.20.3",
@@ -317,7 +333,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2023-12-04T12:04:50+00:00",
     "release_time": "2023-12-04T12:10:32+00:00",
-    "sha1": "76730d175ddbea681cfc28d7dbfa567402036302"
+    "sha1": "e43b8b01d07e6d39540c771326796a463a0abeba"
   },
   {
     "id": "1.20.2",
@@ -333,7 +349,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2023-09-20T09:00:26+00:00",
     "release_time": "2023-09-20T09:02:57+00:00",
-    "sha1": "1ff138ebdcbdc292e0a401254c3914b737a55937"
+    "sha1": "aaf6fc3b828bc9e44e0ce08a789f7d5708c65cf5"
   },
   {
     "id": "1.20.1",
@@ -349,7 +365,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2023-06-12T13:23:26+00:00",
     "release_time": "2023-06-12T13:25:51+00:00",
-    "sha1": "d9ad5f3ab4523f9311a4e67d92a51f5a93d67333"
+    "sha1": "19f5ae58f9c31bd3b0923cb822e99e3162bd62ab"
   },
   {
     "id": "1.20",
@@ -365,7 +381,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2023-06-02T08:33:51+00:00",
     "release_time": "2023-06-02T08:36:17+00:00",
-    "sha1": "8f5fb387c0791ba2f556c0b89578ddd839be763a"
+    "sha1": "0bd82b1770dc6a783f034b60cdfd9fb4227a3c4e"
   },
   {
     "id": "1.19.4",
@@ -381,7 +397,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2023-03-14T12:53:56+00:00",
     "release_time": "2023-03-14T12:56:18+00:00",
-    "sha1": "9c5eb3716b8629c251600d9001766923d3c3ae3f"
+    "sha1": "87db973a23cac0e6d8bbecc7ada6ef33806ce547"
   },
   {
     "id": "1.19.3",
@@ -397,7 +413,7 @@
     "resource_pack_version_minor": 0,
     "build_time": "2022-12-07T08:14:04+00:00",
     "release_time": "2022-12-07T08:17:18+00:00",
-    "sha1": "b5bade6a47bc77186d08d1c5412aa1238fb039aa"
+    "sha1": "dbb4d1aabc720acaa7742823308fc1ecc69c6756"
   },
   {
     "id": "1.19.2",
