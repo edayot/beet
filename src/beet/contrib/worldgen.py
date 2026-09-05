@@ -69,6 +69,12 @@ def worldgen(pack: Union[Context, DataPack]):
         WorldgenFlatLevelGeneratorPresetTag,
         WorldgenWorldPresetTag,
         ConfiguredFeatureTag,
+        BlockStateCarver,
+        BlockStateProvider,
+        MaterialRule,
+        MaterialCondition,
+        Feature,
+        FeatureTag,
     ]
 
 
@@ -190,6 +196,62 @@ class WorldgenMultiNoiseBiomeSourceParameterList(JsonFile):
     scope: ClassVar[NamespaceFileScope] = (
         "worldgen",
         "multi_noise_biome_source_parameter_list",
+    )
+    extension: ClassVar[str] = ".json"
+
+
+class BlockStateCarver(JsonFile):
+    """Class representing a wordlgen carver."""
+
+    scope: ClassVar[NamespaceFileScope] = (
+        "worldgen",
+        "carver",
+    )
+    extension: ClassVar[str] = ".json"
+class BlockStateProvider(JsonFile):
+    """Class representing a block state provider."""
+
+    scope: ClassVar[NamespaceFileScope] = (
+        "worldgen",
+        "block_state_provider",
+    )
+    extension: ClassVar[str] = ".json"
+
+class MaterialRule(JsonFile):
+    """Class representing a material rule."""
+
+    scope: ClassVar[NamespaceFileScope] = (
+        "worldgen",
+        "material_rule",
+    )
+    extension: ClassVar[str] = ".json"
+
+class MaterialCondition(JsonFile):
+    """Class representing a material condition."""
+
+    scope: ClassVar[NamespaceFileScope] = (
+        "worldgen",
+        "material_condition",
+    )
+    extension: ClassVar[str] = ".json"
+
+class Feature(JsonFile):
+    """Class representing a wordgen feature."""
+
+    scope: ClassVar[NamespaceFileScope] = (
+        "worldgen",
+        "feature",
+    )
+    extension: ClassVar[str] = ".json"
+
+
+class FeatureTag(TagFile):
+    """Class representing a wordgen feature."""
+
+    scope: ClassVar[NamespaceFileScope] = (
+        "tags",
+        "worldgen",
+        "feature",
     )
     extension: ClassVar[str] = ".json"
 

@@ -57,6 +57,10 @@ __all__ = [
     "TestEnvironment",
     "SulfurCubeArchetype",
     "PotionTag",
+    "BlockTranformer",
+    "ContextIntProvider",
+    "ContextFloatProvider",
+    "DecoratedPotPattern",
 ]
 
 
@@ -169,6 +173,33 @@ class TrialSpawner(JsonFile):
 
     scope: ClassVar[NamespaceFileScope] = ("trial_spawner",)
     extension: ClassVar[str] = ".json"
+
+class BlockTranformer(JsonFile):
+    """Class representing a block transformer."""
+
+    scope: ClassVar[NamespaceFileScope] = ("block_transformer",)
+    extension: ClassVar[str] = ".json"
+
+class ContextIntProvider(JsonFile):
+    """Class representing a int provider."""
+
+    scope: ClassVar[NamespaceFileScope] = ("context_int_provider",)
+    extension: ClassVar[str] = ".json"
+
+class ContextFloatProvider(JsonFile):
+    """Class representing a float provider."""
+
+    scope: ClassVar[NamespaceFileScope] = ("context_float_provider",)
+    extension: ClassVar[str] = ".json"
+
+class DecoratedPotPattern(JsonFile):
+    """Class representing a float provider."""
+
+    scope: ClassVar[NamespaceFileScope] = ("decorated_pot_pattern",)
+    extension: ClassVar[str] = ".json"
+
+
+
 
 
 class FrogVariant(JsonFile):
@@ -790,6 +821,10 @@ class DataPackNamespace(Namespace):
     world_clock_tags:                   NamespacePin[WorldClockTag]             = NamespacePin(WorldClockTag)
     potion_tags:                        NamespacePin[PotionTag]                 = NamespacePin(PotionTag)
     sulfur_cube_archetypes:             NamespacePin[SulfurCubeArchetype]       = NamespacePin(SulfurCubeArchetype)
+    block_transformers:                 NamespacePin[BlockTranformer]           = NamespacePin(BlockTranformer)
+    context_int_providers:              NamespacePin[ContextIntProvider]        = NamespacePin(ContextIntProvider)
+    context_float_providers:            NamespacePin[ContextFloatProvider]      = NamespacePin(ContextFloatProvider)
+    decorated_pot_patterns:             NamespacePin[DecoratedPotPattern]       = NamespacePin(DecoratedPotPattern)
 
     # fmt: on
 
@@ -869,6 +904,10 @@ class DataPack(Pack[DataPackNamespace]):
     world_clock_tags:                   NamespaceProxyDescriptor[WorldClockTag]             = NamespaceProxyDescriptor(WorldClockTag)
     potion_tags:                        NamespaceProxyDescriptor[PotionTag]                 = NamespaceProxyDescriptor(PotionTag)
     sulfur_cube_archetypes:             NamespaceProxyDescriptor[SulfurCubeArchetype]       = NamespaceProxyDescriptor(SulfurCubeArchetype)
+    block_transformers:                 NamespaceProxyDescriptor[BlockTranformer]           = NamespaceProxyDescriptor(BlockTranformer)
+    context_int_providers:              NamespaceProxyDescriptor[ContextIntProvider]        = NamespaceProxyDescriptor(ContextIntProvider)
+    context_float_providers:            NamespaceProxyDescriptor[ContextFloatProvider]      = NamespaceProxyDescriptor(ContextFloatProvider)
+    decorated_pot_patterns:             NamespaceProxyDescriptor[DecoratedPotPattern]       = NamespaceProxyDescriptor(DecoratedPotPattern)
 
 
     # fmt: on
