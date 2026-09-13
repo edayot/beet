@@ -1,0 +1,13 @@
+data_pack:
+  load: [src]
+require:
+  - bolt
+pipeline:
+  - mecha
+meta:
+  mecha:
+    multiline: true
+    formatting: preserve
+
+
+output: build
