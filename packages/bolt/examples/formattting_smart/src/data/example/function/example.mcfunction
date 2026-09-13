@@ -8,8 +8,9 @@ function ~/test:
 # comment before the loop
 
 for i in range(5):
-    execute if score #test test matches 1 run function ~/test
-
+    execute if score #test test matches f"{i}" run function ~/test
+    execute if score #test test matches f"{-i}" run function ~/test
+say command
 # comment after the loop
 
 
