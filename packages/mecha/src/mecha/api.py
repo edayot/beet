@@ -396,7 +396,17 @@ class Mecha:
                 filename=str(filename) if filename else None,
                 file=source,
             )
-            raise DiagnosticError(DiagnosticCollection([set_location(d, exc)])) from exc
+            inners = []
+            for e in exc.alternatives[InvalidSyntax]:
+                inners.append(set_location(Diagnostic(
+                    level="error",
+                    message=str(e),
+                    notes=e.notes,
+                    hint=resource_location,
+                    filename=str(filename) if filename else None,
+                    file=source,
+                ), e))
+            raise DiagnosticError(DiagnosticCollection([set_location(d, exc), *inners])) from exc
         else:
             if self.cache and filename and cache_miss:
                 try:

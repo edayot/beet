@@ -27,6 +27,13 @@
             "request": "launch",
             "module": "mecha",
             "args": ["-s", "packages/mecha/examples/basic/src/data/demo/functions/foo.mcfunction"]
+        },
+        {
+            "name": "validator",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "beet",
+            "args": ["-p", "packages/mecha/examples/validator"]
         }
     ]
 }

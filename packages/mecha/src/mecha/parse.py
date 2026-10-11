@@ -85,13 +85,20 @@ from typing import (
     Sequence,
     Tuple,
     Type,
+    TypeAliasType,
     Union,
     overload,
 )
 from uuid import UUID
 
+from pydantic import BaseModel, TypeAdapter, ValidationError
+import vanilla_mcdoc
+import vanilla_mcdoc.data
+import vanilla_mcdoc.data.number_provider
+import vanilla_mcdoc.data.number_provider.FloatNumberProvider
+
 from beet import LATEST_MINECRAFT_VERSION
-from beet.core.utils import VersionNumber, split_version
+from beet.core.utils import VersionNumber, format_validation_error, split_version
 from nbtlib import Byte, Double, Float, Int, Long, OutOfRange, Short, String
 from tokenstream import InvalidSyntax, SourceLocation, TokenStream, set_location
 
@@ -576,9 +583,11 @@ def get_default_parsers() -> Dict[str, Parser]:
         "command:argument:minecraft:uuid": delegate("uuid"),
         "command:argument:minecraft:vec2": delegate("vec2"),
         "command:argument:minecraft:vec3": delegate("vec3"),
-        "command:argument:minecraft:context_float_provider": MultilineParser(
-            delegate("resource_location_or_nbt")
-        ),
+        "command:argument:minecraft:context_float_provider": AlternativeParser([
+            MCDocParser(
+                vanilla_mcdoc.data.number_provider.FloatNumberProvider.FloatNumberProvider
+            ), delegate("resource_location"),
+        ]),
         "command:argument:minecraft:context_int_provider": MultilineParser(
             delegate("resource_location_or_nbt")
         ),
@@ -865,6 +874,25 @@ class MultilineParser:
 
         return self.parser(stream)
 
+
+@dataclass
+class MCDocParser:
+    """Allow to parse and validate some data"""
+
+    validator: BaseModel | TypeAliasType
+
+    def format_validation_error(self, exc: ValidationError) -> str:
+        return f"Validation error {self.validator} but got {format_validation_error("", exc).replace("\n", " ")}"
+
+    def __call__(self, stream: TokenStream) -> Any:
+        start_location = stream.current.location 
+        node: AstNbt = MultilineParser(delegate("nbt"))(stream)
+        end_location = stream.current.end_location
+        try: 
+            TypeAdapter(self.validator).validate_python(node.evaluate())
+        except ValidationError as e:
+            raise set_location(InvalidSyntax(self.format_validation_error(e)), start_location, end_location)
+        return node
 
 def parse_bool(stream: TokenStream) -> AstBool:
     """Parse bool."""

@@ -29,6 +29,7 @@ dependencies = [
     "pydantic>=2.12.4",
     "pyyaml>=6.0.3",
     "toml>=0.10.2",
+    "vanilla-mcdoc>=26.3.0.post1",
 ]
 
 [project.urls]

@@ -1,0 +1,10 @@
+
+
+data_pack:
+  load: .
+
+require:
+  - mecha.contrib.nested_resources
+
+pipeline:
+  - mecha
