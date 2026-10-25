@@ -12,23 +12,34 @@ __all__ = [
 ]
 
 
+import hashlib
 import logging
 import re
 import subprocess
 from collections.abc import Callable, Generator, Iterable
 from contextlib import contextmanager
 from dataclasses import dataclass
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from importlib.resources import files
+from io import BytesIO
 from pathlib import Path
 from queue import Empty, Queue, ShutDown
+from tempfile import TemporaryDirectory
 from textwrap import dedent
 from threading import Condition, Thread
 from typing import Self
+from uuid import UUID
+from zipfile import ZIP_DEFLATED, ZipFile
 
-from beet import Context, PackOverwrite, PluginOptions, configurable
+from beet import Context, PackOverwrite, PluginOptions, ResourcePack, configurable
 from beet.contrib.link import LinkManager
 from beet.contrib.singleton import singleton
 from beet.contrib.vanilla import Vanilla
 from beet.core.utils import remove_path
+
+RESOURCE_PACK_ID = UUID("62656574-706c-6179-6772-6f756e640000")
+
+logger = logging.getLogger("playground")
 
 
 class PlaygroundOptions(PluginOptions):
@@ -42,6 +53,9 @@ class PlaygroundOptions(PluginOptions):
         motd=§a{{ project_name }} §4(beet)§r\n{{ project_directory | replace("\\", "\\\\") }}
     """
     port: int | None = None
+    host: str = "localhost"
+    resource_pack: bool = False
+    resource_pack_port: int | None = None
 
 
 @dataclass
@@ -51,6 +65,7 @@ class PlaygroundArgs:
     server_properties: str
     world: Path
     port: int | None
+    resource_pack_url: str | None = None
 
 
 def beet_default(ctx: Context):
@@ -73,6 +88,8 @@ def start(ctx: Context, opts: PlaygroundOptions):
     )
 
     playground = ctx.inject(singleton(Playground))
+    if opts.resource_pack:
+        args.resource_pack_url = playground.serve(opts.host, opts.resource_pack_port)
     playground.start(args)
 
 
@@ -99,6 +116,9 @@ def link(ctx: Context):
                     path = "/".join(path.relative_to(cache.directory).parts)
                 dirty.append(str(path))
 
+            if playground.args.resource_pack_url:
+                playground.resource_pack = _zip_pack(ctx.assets) if ctx.assets else None
+
 
 def clean(ctx: Context):
     """Plugin to remove the data pack previously linked to the playground."""
@@ -117,6 +137,8 @@ def reload(ctx: Context):
     playground = ctx.inject(singleton(Playground))
     playground.run("reload")
 
+    playground.update_resource_pack()
+
 
 class Playground:
     cond: Condition
@@ -126,6 +148,10 @@ class Playground:
 
     listeners: list[Callable[[str], None]]
 
+    http: ThreadingHTTPServer | None
+    resource_pack: bytes | None
+    resource_pack_hash: str | None
+
     def __init__(self):
         self.cond = Condition()
         self.proc = None
@@ -133,6 +159,10 @@ class Playground:
         self.ready = False
 
         self.listeners = []
+
+        self.http = None
+        self.resource_pack = None
+        self.resource_pack_hash = None
 
     def start(self, args: PlaygroundArgs):
         with self.cond:
@@ -152,7 +182,13 @@ class Playground:
                 encoding="utf-8",
             )
 
-            cmd = [args.java, "-jar", args.server_jar, "--nogui"]
+            cmd: list[str | Path] = [args.java]
+            if args.resource_pack_url:
+                # Enable the serverpack command
+                cmd += ["-DMC_DEBUG_ENABLED=true", "-DMC_DEBUG_DEV_COMMANDS=true"]
+                if agent := _build_agent(args.java, args.server_jar.parent):
+                    cmd += [f"-javaagent:{agent}"]
+            cmd += ["-jar", args.server_jar, "--nogui"]
             if args.port is not None:
                 cmd += ["--port", str(args.port)]
 
@@ -167,6 +203,7 @@ class Playground:
                 errors="ignore",
             )
             self.args = args
+            self.resource_pack_hash = None
 
             Thread(target=self._daemon, args=(self.proc,), daemon=True).start()
 
@@ -185,6 +222,30 @@ class Playground:
                 assert self.proc.stdin
                 self.proc.stdin.write(command.strip() + "\n")
                 self.proc.stdin.flush()
+
+    def serve(self, host: str, port: int | None = None) -> str:
+        """Serve the resource pack over http and return its url."""
+        with self.cond:
+            if not self.http:
+                self.http = ThreadingHTTPServer(("", port or 0), _handler(self))
+                Thread(target=self.http.serve_forever, daemon=True).start()
+            return f"http://{host}:{self.http.server_port}/resource_pack.zip"
+
+    def update_resource_pack(self, force: bool = False):
+        """Push the resource pack to connected players if it changed."""
+        with self.cond:
+            if not self.args or not self.args.resource_pack_url:
+                return
+            data = self.resource_pack
+            sha1 = hashlib.sha1(data).hexdigest() if data is not None else None
+            if sha1 == self.resource_pack_hash and not force:
+                return
+            if sha1:
+                url = f"{self.args.resource_pack_url}?{sha1}"
+                self.run(f'serverpack push "{url}" {RESOURCE_PACK_ID} {sha1}')
+            elif self.resource_pack_hash:
+                self.run(f"serverpack pop {RESOURCE_PACK_ID}")
+            self.resource_pack_hash = sha1
 
     @contextmanager
     def log(self, timeout: float | None = None) -> Generator[Iterable[str]]:
@@ -222,6 +283,8 @@ class Playground:
                         if not self.ready:
                             self.ready = True
                             self.cond.notify_all()
+                elif message.endswith(" joined the game"):
+                    self.update_resource_pack(force=True)
             else:
                 level = previous_level
                 message = line
@@ -247,6 +310,75 @@ class Playground:
 
     def __exit__(self, *_):
         self.stop()
+        if self.http:
+            self.http.shutdown()
+            self.http.server_close()
+            self.http = None
+
+
+def _handler(playground: Playground) -> type[BaseHTTPRequestHandler]:
+    class ResourcePackHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            with playground.cond:
+                data = playground.resource_pack
+            if data is None:
+                self.send_error(503, "Resource pack not built yet")
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "application/zip")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(data)
+
+        def log_message(self, format: str, *args: object):
+            pass
+
+    return ResourcePackHandler
+
+
+def _zip_pack(pack: ResourcePack) -> bytes:
+    buffer = BytesIO()
+    with ZipFile(buffer, mode="w", compression=ZIP_DEFLATED) as zip_file:
+        pack.dump(zip_file)
+    return buffer.getvalue()
+
+
+def _build_agent(java: Path, directory: Path) -> Path | None:
+    """Compile the java agent that fixes the serverpack command.
+
+    See PlaygroundAgent.java for details. The agent is compiled with the javac of
+    the minecraft java runtime and cached according to the hash of its source.
+    Returns None if it can't be built, in which case the server runs unpatched.
+    """
+    source = files("beet.resources").joinpath("PlaygroundAgent.java").read_bytes()
+    agent = directory / f"beet-agent-{hashlib.sha1(source).hexdigest()[:12]}.jar"
+    if agent.is_file():
+        return agent
+
+    javac = java.with_name("javac" + java.suffix)
+    with TemporaryDirectory() as tmp:
+        build = Path(tmp)
+        (build / "PlaygroundAgent.java").write_bytes(source)
+        result = subprocess.run(
+            [javac, "-d", build, build / "PlaygroundAgent.java"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            logger.warning("Couldn't compile the playground agent.\n%s", result.stderr)
+            return None
+
+        tmp_agent = agent.with_suffix(".tmp")
+        with ZipFile(tmp_agent, "w", ZIP_DEFLATED) as jar:
+            manifest = "Manifest-Version: 1.0\nPremain-Class: PlaygroundAgent\n"
+            jar.writestr("META-INF/MANIFEST.MF", manifest)
+            for path in build.glob("*.class"):
+                jar.write(path, path.name)
+        tmp_agent.replace(agent)
+
+    return agent
 
 
 def _filter_game_log(record: logging.LogRecord) -> bool:
