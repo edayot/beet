@@ -15,6 +15,7 @@ from contextlib import contextmanager
 from dataclasses import InitVar, dataclass
 from glob import glob
 from io import BufferedReader, BufferedWriter
+from itertools import chain
 from pathlib import Path
 from time import perf_counter_ns
 from typing import (
@@ -397,7 +398,7 @@ class Mecha:
                 file=source,
             )
             inners = []
-            for e in exc.alternatives[InvalidSyntax]:
+            for e in chain.from_iterable(exc.alternatives.values()):
                 inners.append(set_location(Diagnostic(
                     level="error",
                     message=str(e),

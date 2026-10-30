@@ -1,7 +1,6 @@
 
 
 compute default float {
-    "type": "minecraft:score",
-    "target": "this",
-    "score": "a"
+    type: "max",
+    inputs_: [1.2, 2.3, 3.4]
 }
