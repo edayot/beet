@@ -33,6 +33,8 @@ from typing import (
     overload,
 )
 
+from mecha.check import McdocChecker
+
 from beet import (
     LATEST_MINECRAFT_VERSION,
     Cache,
@@ -251,6 +253,8 @@ class Mecha:
             self.transform = MutatingReducer()
             self.optimize = MutatingReducer()
             self.check = Reducer()
+
+        self.check.extend(McdocChecker(self))
 
         self.steps.append(self.lint)
         self.steps.append(self.transform)

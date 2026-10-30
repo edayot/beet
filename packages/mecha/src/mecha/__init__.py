@@ -2,6 +2,7 @@ __version__ = "0.106.0"
 
 from .api import *  # noqa: F403
 from .ast import *  # noqa: F403
+from .check import *  # noqa: F403
 from .config import *  # noqa: F403
 from .database import *  # noqa: F403
 from .diagnostic import *  # noqa: F403

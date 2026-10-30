@@ -10,7 +10,6 @@ __all__ = [
     "delegate",
     "consume_line_continuation",
     "parse_root",
-    "parse_root_item",
     "parse_command",
     "parse_argument",
     "MultilineParser",
@@ -73,11 +72,8 @@ __all__ = [
 ]
 
 
-import json
-import re
 from contextlib import nullcontext
 from dataclasses import dataclass, field
-from difflib import get_close_matches
 from functools import partial
 from typing import (
     Any,
@@ -89,19 +85,10 @@ from typing import (
     Sequence,
     Tuple,
     Type,
-    TypeAliasType,
     Union,
     overload,
 )
-from typing_extensions import TypeForm
 from uuid import UUID
-
-from pydantic import BaseModel, TypeAdapter, ValidationError
-from pydantic_core import ErrorDetails
-import vanilla_mcdoc
-import vanilla_mcdoc.data
-import vanilla_mcdoc.data.number_provider
-import vanilla_mcdoc.data.number_provider.FloatNumberProvider
 
 from beet import LATEST_MINECRAFT_VERSION
 from beet.core.utils import VersionNumber, split_version
@@ -489,7 +476,7 @@ def get_default_parsers() -> Dict[str, Parser]:
         # Command
         ################################################################################
         "root": parse_root,
-        "root_item": parse_root_item,
+        "root_item": AlternativeParser([delegate("macro_line"), delegate("command")]),
         "command": parse_command,
         "command:argument": parse_argument,
         "command:argument:brigadier:bool": delegate("bool"),
@@ -589,11 +576,9 @@ def get_default_parsers() -> Dict[str, Parser]:
         "command:argument:minecraft:uuid": delegate("uuid"),
         "command:argument:minecraft:vec2": delegate("vec2"),
         "command:argument:minecraft:vec3": delegate("vec3"),
-        "command:argument:minecraft:context_float_provider": AlternativeParser([
-            MCDocParser(
-                vanilla_mcdoc.data.number_provider.FloatNumberProvider.FloatNumberProvider
-            ), delegate("resource_location"),
-        ]),
+        "command:argument:minecraft:context_float_provider": MultilineParser(
+            delegate("resource_location_or_nbt")
+        ),
         "command:argument:minecraft:context_int_provider": MultilineParser(
             delegate("resource_location_or_nbt")
         ),
@@ -880,54 +865,6 @@ class MultilineParser:
 
         return self.parser(stream)
 
-
-UNION_LABEL_REGEX = re.compile(r"^[\w-]+\[.*\]$")
-
-
-@dataclass
-class MCDocParser:
-    """Allow to parse and validate some data"""
-
-    validator: TypeForm
-
-    def format_validation_error(self, exc: ValidationError) -> InvalidSyntax:
-        name = getattr(self.validator, "__name__", str(self.validator))
-        error = InvalidSyntax(f"Invalid {name}.")
-
-        for details in exc.errors():
-            # Drop union labels like "tagged-union[...]" that pydantic adds to the path
-            path = "".join(
-                json.dumps([item])
-                for item in details["loc"]
-                if not (isinstance(item, str) and UNION_LABEL_REGEX.match(item))
-            )
-            msg = details["msg"]
-            msg = msg[0].upper() + msg[1:] + "." * (not msg.endswith("."))
-            if suggestion := self.suggest_key(details):
-                msg += f" Did you misspell {json.dumps(suggestion)}?"
-            error.notes.append(f"{path} => {msg}" if path else msg)
-
-        return error
-
-    def suggest_key(self, details: ErrorDetails) -> Optional[str]:
-        """Return a key of the compound that looks like a misspelling of the missing field."""
-        if details["type"] != "missing" or not details["loc"]:
-            return None
-        field_name = details["loc"][-1]
-        compound = details.get("input")
-        if not isinstance(field_name, str) or not isinstance(compound, dict):
-            return None
-        keys = [key for key in compound if isinstance(key, str) and key != field_name]
-        matches = get_close_matches(field_name, keys, n=1)
-        return matches[0] if matches else None
-
-    def __call__(self, stream: TokenStream) -> Any:
-        node: AstNbt = MultilineParser(delegate("nbt"))(stream)
-        try:
-            TypeAdapter(self.validator).validate_python(node.evaluate())
-        except ValidationError as exc:
-            raise node.emit_error(self.format_validation_error(exc)) from exc
-        return node
 
 def parse_bool(stream: TokenStream) -> AstBool:
     """Parse bool."""
@@ -2217,13 +2154,6 @@ class ParticleParser:
 
         node = AstParticle(name=name, parameters=parameters)
         return set_location(node, name, parameters if parameters else name)
-
-
-def parse_root_item(stream: TokenStream) -> AstNode:
-    """Parse root item, only trying macro lines when the line starts with "$"."""
-    with stream.checkpoint(), stream.syntax(macro_line=r"\$"):
-        is_macro_line = stream.get("macro_line")
-    return delegate("macro_line" if is_macro_line else "command", stream)
 
 
 def parse_macro_line(stream: TokenStream) -> AstMacroLine:
