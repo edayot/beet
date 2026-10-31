@@ -12,23 +12,25 @@ from beet.library.base import get_output_scope
 
 class DatapackRegistryProperties(BaseModel):
     """Propriétés d'un registre ou élément"""
+
     elements: bool
     format: str | None = None
     stable: bool
     tags: bool
- 
- 
+
+
 class DatapackOthers(BaseModel):
     """Section 'others' du fichier"""
+
     function: DatapackRegistryProperties
     structure: DatapackRegistryProperties
- 
- 
+
+
 class DatapackRegistries(BaseModel):
     """Modèle racine pour le fichier de configuration Minecraft"""
+
     others: DatapackOthers
     registries: dict[str, DatapackRegistryProperties]
-
 
 
 def resolve_key(key: str):
@@ -93,6 +95,7 @@ def test_vanilla_loading(tmp_path: Path):
     assert len(dp_unknown) == 0, dp_unknown
     assert len(rp_unknown) == 0, rp_unknown
 
+
 def test_registries(tmp_path: Path):
     vanilla = Vanilla(cache=Cache(tmp_path)).shared
 
@@ -134,6 +137,9 @@ def test_registries(tmp_path: Path):
 
     assert len(not_parsed_registries_stable) == 0, not_parsed_registries_stable
     assert len(not_parsed_registries_unstable) == 0, not_parsed_registries_unstable
-    assert len(not_parsed_registries_stable_tags) == 0, not_parsed_registries_stable_tags
-    assert len(not_parsed_registries_unstable_tags) == 0, not_parsed_registries_unstable_tags
-
+    assert len(not_parsed_registries_stable_tags) == 0, (
+        not_parsed_registries_stable_tags
+    )
+    assert len(not_parsed_registries_unstable_tags) == 0, (
+        not_parsed_registries_unstable_tags
+    )
