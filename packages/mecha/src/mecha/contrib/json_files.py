@@ -1,25 +1,26 @@
 """Plugin for compiling json files with mecha."""
 
 __all__ = [
-    "JsonFileCompilation",
-    "AstJsonRoot",
-    "AstJsonContent",
-    "AstMergeJsonContent",
     "AstAppendJsonContent",
+    "AstJsonContent",
+    "AstJsonRoot",
+    "AstMergeJsonContent",
     "AstPrependJsonContent",
-    "JsonRootParser",
     "JsonContentParser",
+    "JsonFileCompilation",
     "JsonFileHandler",
+    "JsonRootParser",
     "JsonFileChecker",
 ]
 
 
 from dataclasses import dataclass
-from typing import Any, Set, Type, Union
+from typing import Any
+
+from tokenstream import TokenStream, set_location
 
 from beet import Context, DataPack, JsonFileBase, ResourcePack
 from beet.core.utils import required_field
-from tokenstream import TokenStream, set_location
 
 from mecha import (
     AstChildren,
@@ -82,13 +83,13 @@ class JsonFileCompilation:
 
     mc: Mecha
     handler: Dispatcher[AstRoot]
-    file_types: Set[Type[JsonFileBase[Any]]]
+    file_types: set[type[JsonFileBase[Any]]]
     active: bool
 
     def __init__(
         self,
-        arg: Union[Context, Mecha],
-        *packs: Union[ResourcePack, DataPack],
+        arg: Context | Mecha,
+        *packs: ResourcePack | DataPack,
     ):
         if isinstance(arg, Context):
             packs += arg.packs
@@ -186,9 +187,7 @@ class JsonFileHandler(Visitor):
 
     @rule(AstJsonRoot)
     def json_root(self, node: AstJsonRoot):
-        for command in node.commands:
-            yield command
-        return None
+        yield from node.commands
 
     @rule(AstCommand)
     def command(self, node: AstCommand):
