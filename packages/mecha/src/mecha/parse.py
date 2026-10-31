@@ -357,11 +357,8 @@ def get_default_parsers() -> dict[str, Parser]:
                 SelectorAmountConstraint(delegate("selector"))
             ),
         ),
-        "score_holder": AlternativeParser(
-            [
-                EntityParser(SelectorAmountConstraint(delegate("selector"))),
-                delegate("wildcard"),
-            ]
+        "score_holder": WildcardOrParser(
+            EntityParser(SelectorAmountConstraint(delegate("selector")))
         ),
         "game_profile": EntityParser(
             selector_parser=SelectorPlayerConstraint(delegate("selector")),
@@ -471,7 +468,7 @@ def get_default_parsers() -> dict[str, Parser]:
         # Command
         ################################################################################
         "root": parse_root,
-        "root_item": AlternativeParser([delegate("macro_line"), delegate("command")]),
+        "root_item": parse_root_item,
         "command": parse_command,
         "command:argument": parse_argument,
         "command:argument:brigadier:bool": delegate("bool"),
@@ -541,11 +538,8 @@ def get_default_parsers() -> dict[str, Parser]:
         ),
         "command:argument:minecraft:nbt_path": MultilineParser(delegate("nbt_path")),
         "command:argument:minecraft:nbt_tag": MultilineParser(delegate("nbt")),
-        "command:argument:minecraft:objective": AlternativeParser(
-            [
-                delegate("objective"),
-                delegate("wildcard"),
-            ]
+        "command:argument:minecraft:objective": WildcardOrParser(
+            delegate("objective")
         ),
         "command:argument:minecraft:objective_criteria": delegate("objective_criteria"),
         "command:argument:minecraft:operation": delegate("scoreboard_operation"),
@@ -2151,6 +2145,13 @@ class ParticleParser:
         return set_location(node, name, parameters if parameters else name)
 
 
+def parse_root_item(stream: TokenStream) -> AstNode:
+    """Parse a macro line if the line starts with a dollar sign, otherwise a command."""
+    with stream.syntax(macro_line=r"\$"), stream.checkpoint():
+        is_macro_line = stream.get("macro_line") is not None
+    return delegate("macro_line" if is_macro_line else "command", stream)
+
+
 def parse_macro_line(stream: TokenStream) -> AstMacroLine:
     """Parse macro line."""
     with stream.syntax(macro_line=r"\$"):
@@ -2203,6 +2204,18 @@ class SingleLineConstraint:
     def __call__(self, stream: TokenStream) -> Any:
         with stream.intercept("newline"):
             return self.parser(stream)
+
+
+@dataclass
+class WildcardOrParser:
+    """Parser that parses a wildcard if the next character is one, otherwise the given parser."""
+
+    parser: Parser
+
+    def __call__(self, stream: TokenStream) -> Any:
+        with stream.syntax(wildcard=r"\*"), stream.checkpoint():
+            is_wildcard = stream.get("wildcard") is not None
+        return delegate("wildcard", stream) if is_wildcard else self.parser(stream)
 
 
 @dataclass
