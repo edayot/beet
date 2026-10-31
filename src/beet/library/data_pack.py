@@ -210,7 +210,7 @@ class ContextIntProvider(JsonFile):
     scope: ClassVar[NamespaceFileScope] = ("context_int_provider",)
     extension: ClassVar[str] = ".json"
     mcdoc_type: ClassVar[str | None] = (
-        "::java::data::number_provider::context_int::ContextIntProvider"
+        "::vanilla_mcdoc::java::data::number_provider::context_int::ContextIntProvider"
     )
 
 
@@ -220,7 +220,7 @@ class ContextFloatProvider(JsonFile):
     scope: ClassVar[NamespaceFileScope] = ("context_float_provider",)
     extension: ClassVar[str] = ".json"
     mcdoc_type: ClassVar[str | None] = (
-        "::java::data::number_provider::context_float::ContextFloatProvider"
+        "::vanilla_mcdoc::java::data::number_provider::context_float::ContextFloatProvider"
     )
 
 

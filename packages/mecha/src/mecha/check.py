@@ -27,8 +27,8 @@ if TYPE_CHECKING:
 
 
 MCDOC_ARGUMENT_TYPES: dict[str, str] = {
-    "minecraft:context_float_provider": "::java::data::number_provider::FloatNumberProvider",
-    "minecraft:context_int_provider": "::java::data::number_provider::IntNumberProvider",
+    "minecraft:context_float_provider": "::vanilla_mcdoc::java::data::number_provider::FloatNumberProvider",
+    "minecraft:context_int_provider": "::vanilla_mcdoc::java::data::number_provider::IntNumberProvider",
 }
 
 TAG_REGEX = re.compile(r"'([^']*)'")
@@ -37,11 +37,12 @@ TAG_REGEX = re.compile(r"'([^']*)'")
 def resolve_mcdoc_type(path: str) -> Any:
     """Import the vanilla_mcdoc model of the given mcdoc path.
 
-    For example "::java::data::loot::LootTable" resolves to the `LootTable` type
+    For example "::vanilla_mcdoc::java::data::loot::LootTable" resolves to the `LootTable` type
     of the `vanilla_mcdoc.data.loot.LootTable` module.
     """
-    parts = path.removeprefix("::java::").split("::")
-    module = import_module(".".join(["vanilla_mcdoc", *parts]))
+    _, module_name, path = path.split("::", 2)
+    parts = path.removeprefix("java::").split("::")
+    module = import_module(".".join([module_name, *parts]))
     return getattr(module, parts[-1])
 
 
