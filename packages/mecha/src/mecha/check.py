@@ -14,7 +14,15 @@ from pydantic import TypeAdapter, ValidationError
 from pydantic_core import ErrorDetails
 from tokenstream import set_location
 
-from .ast import AstCommand, AstNbt
+from .ast import (
+    AstCommand,
+    AstNbt,
+    AstNbtByteArray,
+    AstNbtCompound,
+    AstNbtIntArray,
+    AstNbtList,
+    AstNbtLongArray,
+)
 from .diagnostic import Diagnostic
 from .dispatch import Reducer, rule
 
@@ -62,9 +70,23 @@ class McdocChecker(Reducer):
             if not (adapter := self.get_adapter(tree.parser)):
                 continue
             try:
-                adapter.validate_python(argument.evaluate())
+                adapter.validate_python(self.to_python(argument))
             except ValidationError as exc:
                 yield set_location(self.format_validation_error(tree.parser, exc), argument)
+
+    def to_python(self, node: AstNbt) -> Any:
+        """Convert the nbt node to plain python values.
+
+        Unlike `AstNbt.evaluate()`, this supports heterogeneous lists, which
+        nbtlib can't represent.
+        """
+        if isinstance(node, AstNbtCompound):
+            return {entry.key.value: self.to_python(entry.value) for entry in node.entries}
+        if isinstance(
+            node, (AstNbtList, AstNbtByteArray, AstNbtIntArray, AstNbtLongArray)
+        ):
+            return [self.to_python(element) for element in node.elements]
+        return node.evaluate()
 
     def format_validation_error(self, parser: str, exc: ValidationError) -> Diagnostic:
         validator = MCDOC_ARGUMENT_TYPES[parser]
