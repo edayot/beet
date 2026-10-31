@@ -1,17 +1,18 @@
 __all__ = [
+    "MCDOC_ARGUMENT_TYPES",
     "McdocChecker",
     "ValidationIssue",
-    "MCDOC_ARGUMENT_TYPES",
     "resolve_mcdoc_type",
 ]
 
 
 import json
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from difflib import get_close_matches
 from importlib import import_module
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from pydantic import TypeAdapter, ValidationError
 from pydantic_core import ErrorDetails
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
     from .api import Mecha
 
 
-MCDOC_ARGUMENT_TYPES: Dict[str, str] = {
+MCDOC_ARGUMENT_TYPES: dict[str, str] = {
     "minecraft:context_float_provider": "::java::data::number_provider::FloatNumberProvider",
     "minecraft:context_int_provider": "::java::data::number_provider::IntNumberProvider",
 }
@@ -53,22 +54,25 @@ class ValidationIssue:
     """Pydantic error, with what each item of its location refers to in the data."""
 
     details: ErrorDetails
-    flags: List[bool]
+    flags: list[bool]
 
     @classmethod
-    def from_details(cls, details: ErrorDetails, value: Any) -> "ValidationIssue":
+    def from_details(cls, details: ErrorDetails, value: Any) -> ValidationIssue:
         """Tell for each item of the error location if it's a key or an index of the data.
 
         The other items are labels that pydantic adds for union branches, like
         "float", "tagged-union[...]" or the tag of the branch.
         """
         loc = details["loc"]
-        flags: List[bool] = []
+        flags: list[bool] = []
         for i, item in enumerate(loc):
-            if isinstance(value, dict) and item in value:
-                value = value[item]
-                flags.append(True)
-            elif isinstance(value, list) and isinstance(item, int) and 0 <= item < len(value):
+            if (
+                isinstance(value, dict)
+                and item in value
+                or isinstance(value, list)
+                and isinstance(item, int)
+                and 0 <= item < len(value)
+            ):
                 value = value[item]
                 flags.append(True)
             else:
@@ -80,11 +84,11 @@ class ValidationIssue:
         return self.details["type"]
 
     @property
-    def loc(self) -> tuple[Union[str, int], ...]:
+    def loc(self) -> tuple[str | int, ...]:
         return self.details["loc"]
 
     @property
-    def path(self) -> List[Union[str, int]]:
+    def path(self) -> list[str | int]:
         """Location of the error in the data, without the union labels."""
         return [item for item, is_data in zip(self.loc, self.flags) if is_data]
 
@@ -103,7 +107,7 @@ class ValidationIssue:
     def is_data(self, index: int) -> bool:
         return self.flags[index]
 
-    def format(self) -> tuple[List[Union[str, int]], str]:
+    def format(self) -> tuple[list[str | int], str]:
         """Return the path of the invalid node and the message."""
         path = self.path
 
@@ -127,7 +131,7 @@ class ValidationIssue:
 
         return path, msg
 
-    def find_tag_key(self, tag: str) -> Optional[str]:
+    def find_tag_key(self, tag: str) -> str | None:
         """Return the key of the compound that holds the tag of the tagged union."""
         compound = self.details["input"]
         if not isinstance(compound, dict):
@@ -137,14 +141,14 @@ class ValidationIssue:
                 return key
         return None
 
-    def suggest_tag(self, tag: str, expected: List[str]) -> Optional[str]:
+    def suggest_tag(self, tag: str, expected: list[str]) -> str | None:
         """Return the expected tag that looks like a misspelling of the given tag."""
         # Compare without the namespace, otherwise all the tags look alike
         paths = {name.removeprefix("minecraft:"): name for name in expected}
         matches = get_close_matches(tag.removeprefix("minecraft:"), list(paths), n=1)
         return paths[matches[0]] if matches else None
 
-    def suggest_key(self) -> Optional[str]:
+    def suggest_key(self) -> str | None:
         """Return a key of the compound that looks like a misspelling of the missing field."""
         if self.type != "missing" or not self.loc:
             return None
@@ -160,10 +164,10 @@ class ValidationIssue:
 class McdocChecker(Reducer):
     """Checker that validates nbt and json values against their mcdoc type."""
 
-    mc: "Mecha"
-    adapters: Dict[str, TypeAdapter[Any]]
+    mc: Mecha
+    adapters: dict[str, TypeAdapter[Any]]
 
-    def __init__(self, mc: "Mecha"):
+    def __init__(self, mc: Mecha):
         super().__init__()
         self.mc = mc
         self.adapters = {}
@@ -195,7 +199,9 @@ class McdocChecker(Reducer):
             self.get_adapter(mcdoc_type).validate_python(value)
         except ValidationError as exc:
             name = mcdoc_type.rsplit("::", 1)[-1]
-            issues = [ValidationIssue.from_details(details, value) for details in exc.errors()]
+            issues = [
+                ValidationIssue.from_details(details, value) for details in exc.errors()
+            ]
 
             for issue in self.best_issues(issues):
                 path, msg = issue.format()
@@ -204,7 +210,7 @@ class McdocChecker(Reducer):
                 diagnostic = Diagnostic("error", f"Invalid {name}.", notes=[note])
                 yield set_location(diagnostic, self.find_node(node, path))
 
-    def find_node(self, node: AstNbt | AstJson, path: List[Union[str, int]]) -> AstNode:
+    def find_node(self, node: AstNbt | AstJson, path: list[str | int]) -> AstNode:
         """Return the node at the given data path, or the deepest one that exists."""
         for item in path:
             if (child := node.child(item)) is None:
@@ -214,12 +220,12 @@ class McdocChecker(Reducer):
 
     def best_issues(
         self,
-        issues: List[ValidationIssue],
+        issues: list[ValidationIssue],
         depth: int = 0,
-    ) -> List[ValidationIssue]:
+    ) -> list[ValidationIssue]:
         """Only keep the issues of the union branches that match the data the best."""
-        result: List[ValidationIssue] = []
-        groups: Dict[Any, List[ValidationIssue]] = {}
+        result: list[ValidationIssue] = []
+        groups: dict[Any, list[ValidationIssue]] = {}
         for issue in issues:
             if len(issue.loc) > depth:
                 groups.setdefault(issue.loc[depth], []).append(issue)
@@ -234,7 +240,7 @@ class McdocChecker(Reducer):
             result.extend(self.best_issues(branch, depth + 1))
         return result
 
-    def branch_score(self, issues: List[ValidationIssue]) -> tuple[int, bool]:
+    def branch_score(self, issues: list[ValidationIssue]) -> tuple[int, bool]:
         """Prefer branches that go deeper into the data, then the ones where the type matches."""
         return (
             max(issue.depth for issue in issues),

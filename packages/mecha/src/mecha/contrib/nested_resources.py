@@ -1,11 +1,11 @@
 """Plugin for handling nested resources."""
 
 __all__ = [
+    "NESTED_RESOURCE_PARSERS",
     "AstNestedText",
     "NestedResources",
     "NestedResourcesTransformer",
     "parse_nested_text",
-    "NESTED_RESOURCE_PARSERS",
 ]
 
 
@@ -55,7 +55,7 @@ from mecha.contrib.json_files import (
     JsonFileCompilation,
 )
 
-NESTED_RESOURCE_PARSERS: Dict[Type[NamespaceFile], str] = {
+NESTED_RESOURCE_PARSERS: dict[type[NamespaceFile], str] = {
     ContextFloatProvider: "minecraft:context_float_provider",
     ContextIntProvider: "minecraft:context_int_provider",
 }

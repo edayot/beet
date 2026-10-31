@@ -538,9 +538,7 @@ def get_default_parsers() -> dict[str, Parser]:
         ),
         "command:argument:minecraft:nbt_path": MultilineParser(delegate("nbt_path")),
         "command:argument:minecraft:nbt_tag": MultilineParser(delegate("nbt")),
-        "command:argument:minecraft:objective": WildcardOrParser(
-            delegate("objective")
-        ),
+        "command:argument:minecraft:objective": WildcardOrParser(delegate("objective")),
         "command:argument:minecraft:objective_criteria": delegate("objective_criteria"),
         "command:argument:minecraft:operation": delegate("scoreboard_operation"),
         "command:argument:minecraft:particle": delegate("particle"),

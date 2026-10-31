@@ -642,7 +642,7 @@ class AstJson(AstNode):
         """Return the json value as plain python values."""
         return self.evaluate()
 
-    def child(self, key: Union[str, int]) -> Optional["AstJson"]:
+    def child(self, key: str | int) -> AstJson | None:
         """Return the nested value at the given key or index, if any."""
         return None
 
@@ -692,7 +692,7 @@ class AstJsonArray(AstJson):
     def evaluate(self) -> Any:
         return [element.evaluate() for element in self.elements]
 
-    def child(self, key: Union[str, int]) -> Optional[AstJson]:
+    def child(self, key: str | int) -> AstJson | None:
         if isinstance(key, int) and 0 <= key < len(self.elements):
             return self.elements[key]
         return None
@@ -724,7 +724,7 @@ class AstJsonObject(AstJson):
     def evaluate(self) -> Any:
         return {entry.key.value: entry.value.evaluate() for entry in self.entries}
 
-    def child(self, key: Union[str, int]) -> Optional[AstJson]:
+    def child(self, key: str | int) -> AstJson | None:
         # Like in the evaluated object, the last duplicate key wins
         for entry in reversed(self.entries):
             if entry.key.value == key:
@@ -757,7 +757,7 @@ class AstNbt(AstNode):
         """Convert the nbt value to json ast nodes, keeping the location."""
         return set_location(AstJson.from_value(self.unpack()), self)
 
-    def child(self, key: Union[str, int]) -> Optional["AstNbt"]:
+    def child(self, key: str | int) -> AstNbt | None:
         """Return the nested value at the given key or index, if any."""
         return None
 
@@ -858,7 +858,7 @@ class AstNbtList(AstNbt):
         elements = AstChildren(element.to_json() for element in self.elements)
         return set_location(AstJsonArray(elements=elements), self)
 
-    def child(self, key: Union[str, int]) -> Optional[AstNbt]:
+    def child(self, key: str | int) -> AstNbt | None:
         if isinstance(key, int) and 0 <= key < len(self.elements):
             return self.elements[key]
         return None
@@ -899,7 +899,9 @@ class AstNbtCompound(AstNbt):
         entries = AstChildren(
             set_location(
                 AstJsonObjectEntry(
-                    key=set_location(AstJsonObjectKey(value=entry.key.value), entry.key),
+                    key=set_location(
+                        AstJsonObjectKey(value=entry.key.value), entry.key
+                    ),
                     value=entry.value.to_json(),
                 ),
                 entry,
@@ -908,7 +910,7 @@ class AstNbtCompound(AstNbt):
         )
         return set_location(AstJsonObject(entries=entries), self)
 
-    def child(self, key: Union[str, int]) -> Optional[AstNbt]:
+    def child(self, key: str | int) -> AstNbt | None:
         # Like in the evaluated compound, the last duplicate key wins
         for entry in reversed(self.entries):
             if entry.key.value == key:

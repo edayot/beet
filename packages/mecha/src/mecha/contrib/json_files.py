@@ -7,10 +7,10 @@ __all__ = [
     "AstMergeJsonContent",
     "AstPrependJsonContent",
     "JsonContentParser",
+    "JsonFileChecker",
     "JsonFileCompilation",
     "JsonFileHandler",
     "JsonRootParser",
-    "JsonFileChecker",
 ]
 
 

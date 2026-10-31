@@ -605,7 +605,7 @@ class DataModelBase[ValueType: Any](TextFileBase[ValueType]):
 class JsonFileBase[ValueType: Any](DataModelBase[ValueType]):
     """Base class for json files."""
 
-    mcdoc_type: ClassVar[Optional[str]] = None
+    mcdoc_type: ClassVar[str | None] = None
     """Path of the mcdoc type describing the file, e.g. "::java::data::loot::LootTable".
 
     It's a path rather than the generated model, so that the models are only
