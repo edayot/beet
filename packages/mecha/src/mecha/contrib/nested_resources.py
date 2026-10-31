@@ -5,6 +5,7 @@ __all__ = [
     "NestedResourcesTransformer",
     "AstNestedText",
     "parse_nested_text",
+    "NESTED_RESOURCE_PARSERS",
 ]
 
 
@@ -14,6 +15,8 @@ from typing import Any, Dict, List, Type, Union, cast
 
 from beet import (
     Context,
+    ContextFloatProvider,
+    ContextIntProvider,
     DataModelBase,
     DataPack,
     Generator,
@@ -30,6 +33,7 @@ from mecha import (
     AstChildren,
     AstCommand,
     AstJson,
+    AstNbt,
     AstNode,
     AstResourceLocation,
     AstRoot,
@@ -49,6 +53,11 @@ from mecha.contrib.json_files import (
     AstPrependJsonContent,
     JsonFileCompilation,
 )
+
+NESTED_RESOURCE_PARSERS: Dict[Type[NamespaceFile], str] = {
+    ContextFloatProvider: "minecraft:context_float_provider",
+    ContextIntProvider: "minecraft:context_int_provider",
+}
 
 
 def beet_default(ctx: Context):
@@ -101,8 +110,10 @@ class NestedResources:
         }
 
         json_commands = {
-            name: self.create_command_tree_fragment("mecha:nested_json")
-            for name in self.json_resources
+            name: self.create_command_tree_fragment(
+                NESTED_RESOURCE_PARSERS.get(file_type, "mecha:nested_json")
+            )
+            for name, file_type in self.json_resources.items()
         }
 
         tag_commands = {
@@ -222,6 +233,18 @@ class NestedResourcesTransformer(MutatingReducer):
         for command in node.commands:
             if file_type := self.nested_resource_identifiers.get(command.identifier):
                 name, content = command.arguments
+
+                if file_type in NESTED_RESOURCE_PARSERS:
+                    if isinstance(content, AstNbt):
+                        content = content.to_json()
+                    elif not isinstance(content, AstJson):
+                        d = Diagnostic(
+                            "error",
+                            f"Expected inline {snake_case(file_type.__name__)}, not a reference.",
+                        )
+                        yield set_location(d, content)
+                        changed = True
+                        continue
 
                 if isinstance(name, AstResourceLocation) and isinstance(
                     content, (AstJson, AstNestedText)

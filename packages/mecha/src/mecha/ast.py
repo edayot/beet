@@ -645,6 +645,14 @@ class AstJson(AstNode):
         """Return the json value."""
         raise NotImplementedError()
 
+    def unpack(self) -> Any:
+        """Return the json value as plain python values."""
+        return self.evaluate()
+
+    def child(self, key: Union[str, int]) -> Optional["AstJson"]:
+        """Return the nested value at the given key or index, if any."""
+        return None
+
     @classmethod
     def from_value(cls, value: Any) -> "AstJson":
         """Create json ast nodes representing the specified json value."""
@@ -691,6 +699,11 @@ class AstJsonArray(AstJson):
     def evaluate(self) -> Any:
         return [element.evaluate() for element in self.elements]
 
+    def child(self, key: Union[str, int]) -> Optional[AstJson]:
+        if isinstance(key, int) and 0 <= key < len(self.elements):
+            return self.elements[key]
+        return None
+
 
 @dataclass(frozen=True, slots=True)
 class AstJsonObjectKey(AstNode):
@@ -718,6 +731,13 @@ class AstJsonObject(AstJson):
     def evaluate(self) -> Any:
         return {entry.key.value: entry.value.evaluate() for entry in self.entries}
 
+    def child(self, key: Union[str, int]) -> Optional[AstJson]:
+        # Like in the evaluated object, the last duplicate key wins
+        for entry in reversed(self.entries):
+            if entry.key.value == key:
+                return entry.value
+        return None
+
 
 @dataclass(frozen=True, slots=True)
 class AstNbt(AstNode):
@@ -728,6 +748,25 @@ class AstNbt(AstNode):
     def evaluate(self) -> Any:
         """Return the nbt value."""
         raise NotImplementedError()
+
+    def unpack(self) -> Any:
+        """Return the nbt value as plain python values.
+
+        Unlike `evaluate()`, this supports heterogeneous lists, which nbtlib
+        can't represent.
+        """
+        value = self.evaluate()
+        if isinstance(value, (ByteArray, IntArray, LongArray)):
+            return value.tolist()
+        return value.unpack()
+
+    def to_json(self) -> AstJson:
+        """Convert the nbt value to json ast nodes, keeping the location."""
+        return set_location(AstJson.from_value(self.unpack()), self)
+
+    def child(self, key: Union[str, int]) -> Optional["AstNbt"]:
+        """Return the nested value at the given key or index, if any."""
+        return None
 
     @overload
     @classmethod
@@ -804,6 +843,9 @@ class AstNbtValue(AstNbt):
 class AstNbtBool(AstNbtValue):
     """Ast nbt bool node."""
 
+    def unpack(self) -> Any:
+        return bool(self.value)
+
 
 @dataclass(frozen=True, slots=True)
 class AstNbtList(AstNbt):
@@ -815,6 +857,18 @@ class AstNbtList(AstNbt):
 
     def evaluate(self) -> Any:
         return ListTag([element.evaluate() for element in self.elements])
+
+    def unpack(self) -> Any:
+        return [element.unpack() for element in self.elements]
+
+    def to_json(self) -> AstJson:
+        elements = AstChildren(element.to_json() for element in self.elements)
+        return set_location(AstJsonArray(elements=elements), self)
+
+    def child(self, key: Union[str, int]) -> Optional[AstNbt]:
+        if isinstance(key, int) and 0 <= key < len(self.elements):
+            return self.elements[key]
+        return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -844,6 +898,29 @@ class AstNbtCompound(AstNbt):
         return Compound(
             {entry.key.value: entry.value.evaluate() for entry in self.entries},
         )
+
+    def unpack(self) -> Any:
+        return {entry.key.value: entry.value.unpack() for entry in self.entries}
+
+    def to_json(self) -> AstJson:
+        entries = AstChildren(
+            set_location(
+                AstJsonObjectEntry(
+                    key=set_location(AstJsonObjectKey(value=entry.key.value), entry.key),
+                    value=entry.value.to_json(),
+                ),
+                entry,
+            )
+            for entry in self.entries
+        )
+        return set_location(AstJsonObject(entries=entries), self)
+
+    def child(self, key: Union[str, int]) -> Optional[AstNbt]:
+        # Like in the evaluated compound, the last duplicate key wins
+        for entry in reversed(self.entries):
+            if entry.key.value == key:
+                return entry.value
+        return None
 
 
 @dataclass(frozen=True, slots=True)

@@ -10,6 +10,7 @@ __all__ = [
     "JsonRootParser",
     "JsonContentParser",
     "JsonFileHandler",
+    "JsonFileChecker",
 ]
 
 
@@ -32,6 +33,7 @@ from mecha import (
     FileTypeCompilationUnitProvider,
     Mecha,
     Parser,
+    Reducer,
     Visitor,
     delegate,
     rule,
@@ -96,6 +98,8 @@ class JsonFileCompilation:
 
         self.handler = JsonFileHandler(database=self.mc.database)
         self.mc.steps.append(self.handler)
+
+        self.mc.check.extend(JsonFileChecker(mc=self.mc))
 
         self.file_types = {  # pyright: ignore[reportAttributeAccessIssue]
             file_type
@@ -219,3 +223,21 @@ class JsonFileHandler(Visitor):
 
                 else:
                     target.data = file_instance.data
+
+
+@dataclass
+class JsonFileChecker(Reducer):
+    """Checker that validates json files against their mcdoc type."""
+
+    mc: Mecha = required_field()
+
+    @rule(AstJsonContent)
+    def mcdoc_validation(self, node: AstJsonContent):
+        # Merged, appended and prepended content is only a part of the file
+        if type(node) is not AstJsonContent:
+            return
+        if not node.arguments or not isinstance(content := node.arguments[0], AstJson):
+            return
+        file_type = type(self.mc.database.current)
+        if mcdoc_type := getattr(file_type, "mcdoc_type", None):
+            yield from self.mc.mcdoc.validate(mcdoc_type, content)

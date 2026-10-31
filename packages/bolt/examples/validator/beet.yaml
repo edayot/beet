@@ -1,0 +1,12 @@
+
+
+data_pack:
+  load: .
+
+require:
+  - bolt
+  - mecha.contrib.nested_resources
+  - mecha.contrib.json_files
+
+pipeline:
+  - mecha

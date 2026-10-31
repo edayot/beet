@@ -1,30 +1,23 @@
 __all__ = [
     "McdocChecker",
+    "ValidationIssue",
     "MCDOC_ARGUMENT_TYPES",
+    "resolve_mcdoc_type",
 ]
 
 
 import json
 import re
+from dataclasses import dataclass
 from difflib import get_close_matches
-from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional
+from importlib import import_module
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Union
 
-import vanilla_mcdoc.data.number_provider.FloatNumberProvider
-import vanilla_mcdoc.data.number_provider.IntNumberProvider
 from pydantic import TypeAdapter, ValidationError
 from pydantic_core import ErrorDetails
 from tokenstream import explain_patterns, set_location
-import vanilla_mcdoc.data.number_provider.IntNumberProvider
 
-from .ast import (
-    AstCommand,
-    AstNbt,
-    AstNbtByteArray,
-    AstNbtCompound,
-    AstNbtIntArray,
-    AstNbtList,
-    AstNbtLongArray,
-)
+from .ast import AstCommand, AstJson, AstNbt, AstNode
 from .diagnostic import Diagnostic
 from .dispatch import Reducer, rule
 
@@ -32,20 +25,140 @@ if TYPE_CHECKING:
     from .api import Mecha
 
 
-MCDOC_ARGUMENT_TYPES: Dict[str, Any] = {
-    "minecraft:context_float_provider": vanilla_mcdoc.data.number_provider.FloatNumberProvider.FloatNumberProvider,
-    "minecraft:context_int_provider": vanilla_mcdoc.data.number_provider.IntNumberProvider.IntNumberProvider,
+MCDOC_ARGUMENT_TYPES: Dict[str, str] = {
+    "minecraft:context_float_provider": "::java::data::number_provider::FloatNumberProvider",
+    "minecraft:context_int_provider": "::java::data::number_provider::IntNumberProvider",
 }
 
 TAG_REGEX = re.compile(r"'([^']*)'")
 
-ValidationIssue = tuple[ErrorDetails, list[bool]]
 
-AstNbtSequence = (AstNbtList, AstNbtByteArray, AstNbtIntArray, AstNbtLongArray)
+def resolve_mcdoc_type(path: str) -> Any:
+    """Import the vanilla_mcdoc model of the given mcdoc path.
+
+    For example "::java::data::loot::LootTable" resolves to the `LootTable` type
+    of the `vanilla_mcdoc.data.loot.LootTable` module.
+    """
+    parts = path.removeprefix("::java::").split("::")
+    module = import_module(".".join(["vanilla_mcdoc", *parts]))
+    return getattr(module, parts[-1])
+
+
+def quote(value: Any) -> str:
+    return json.dumps(value)
+
+
+@dataclass(frozen=True, slots=True)
+class ValidationIssue:
+    """Pydantic error, with what each item of its location refers to in the data."""
+
+    details: ErrorDetails
+    flags: List[bool]
+
+    @classmethod
+    def from_details(cls, details: ErrorDetails, value: Any) -> "ValidationIssue":
+        """Tell for each item of the error location if it's a key or an index of the data.
+
+        The other items are labels that pydantic adds for union branches, like
+        "float", "tagged-union[...]" or the tag of the branch.
+        """
+        loc = details["loc"]
+        flags: List[bool] = []
+        for i, item in enumerate(loc):
+            if isinstance(value, dict) and item in value:
+                value = value[item]
+                flags.append(True)
+            elif isinstance(value, list) and isinstance(item, int) and 0 <= item < len(value):
+                value = value[item]
+                flags.append(True)
+            else:
+                flags.append(details["type"] == "missing" and i == len(loc) - 1)
+        return cls(details, flags)
+
+    @property
+    def type(self) -> str:
+        return self.details["type"]
+
+    @property
+    def loc(self) -> tuple[Union[str, int], ...]:
+        return self.details["loc"]
+
+    @property
+    def path(self) -> List[Union[str, int]]:
+        """Location of the error in the data, without the union labels."""
+        return [item for item, is_data in zip(self.loc, self.flags) if is_data]
+
+    @property
+    def depth(self) -> int:
+        """How deep in the data the error is."""
+        return sum(self.flags)
+
+    @property
+    def is_type_mismatch(self) -> bool:
+        """Whether the data isn't even the right type for the union branch."""
+        if self.type == "literal_error":
+            return not isinstance(self.details["input"], (str, int, float))
+        return self.type.endswith("_type") or self.type == "union_tag_not_found"
+
+    def is_data(self, index: int) -> bool:
+        return self.flags[index]
+
+    def format(self) -> tuple[List[Union[str, int]], str]:
+        """Return the path of the invalid node and the message."""
+        path = self.path
+
+        if self.type == "union_tag_invalid" and "ctx" in self.details:
+            tag = self.details["ctx"]["tag"]
+            key = self.find_tag_key(tag)
+            if key is not None:
+                path.append(key)
+            msg = f"Unknown {key or 'tag'} {quote(tag)}."
+            expected = TAG_REGEX.findall(self.details["ctx"]["expected_tags"])
+            if suggestion := self.suggest_tag(tag, expected):
+                msg += f" Did you mean {quote(suggestion)}?"
+            else:
+                patterns = tuple(quote(tag) for tag in expected)
+                msg += f" Expected {explain_patterns(patterns)}."
+        else:
+            msg = self.details["msg"]
+            msg = msg[0].upper() + msg[1:] + "." * (not msg.endswith("."))
+            if suggestion := self.suggest_key():
+                msg += f" Did you misspell {quote(suggestion)}?"
+
+        return path, msg
+
+    def find_tag_key(self, tag: str) -> Optional[str]:
+        """Return the key of the compound that holds the tag of the tagged union."""
+        compound = self.details["input"]
+        if not isinstance(compound, dict):
+            return None
+        for key, value in compound.items():
+            if isinstance(value, str) and tag in (value, f"minecraft:{value}"):
+                return key
+        return None
+
+    def suggest_tag(self, tag: str, expected: List[str]) -> Optional[str]:
+        """Return the expected tag that looks like a misspelling of the given tag."""
+        # Compare without the namespace, otherwise all the tags look alike
+        paths = {name.removeprefix("minecraft:"): name for name in expected}
+        matches = get_close_matches(tag.removeprefix("minecraft:"), list(paths), n=1)
+        return paths[matches[0]] if matches else None
+
+    def suggest_key(self) -> Optional[str]:
+        """Return a key of the compound that looks like a misspelling of the missing field."""
+        if self.type != "missing" or not self.loc:
+            return None
+        field_name = self.loc[-1]
+        compound = self.details.get("input")
+        if not isinstance(field_name, str) or not isinstance(compound, dict):
+            return None
+        keys = [key for key in compound if isinstance(key, str) and key != field_name]
+        matches = get_close_matches(field_name, keys, n=1)
+        return matches[0] if matches else None
 
 
 class McdocChecker(Reducer):
-    """Checker that validates nbt command arguments against their mcdoc type."""
+    """Checker that validates nbt and json values against their mcdoc type."""
 
     mc: "Mecha"
     adapters: Dict[str, TypeAdapter[Any]]
@@ -55,12 +168,10 @@ class McdocChecker(Reducer):
         self.mc = mc
         self.adapters = {}
 
-    def get_adapter(self, parser: str) -> Optional[TypeAdapter[Any]]:
-        if parser not in self.adapters:
-            if (validator := MCDOC_ARGUMENT_TYPES.get(parser)) is None:
-                return None
-            self.adapters[parser] = TypeAdapter(validator)
-        return self.adapters[parser]
+    def get_adapter(self, mcdoc_type: str) -> TypeAdapter[Any]:
+        if mcdoc_type not in self.adapters:
+            self.adapters[mcdoc_type] = TypeAdapter(resolve_mcdoc_type(mcdoc_type))
+        return self.adapters[mcdoc_type]
 
     @rule(AstCommand)
     def mcdoc_validation(self, node: AstCommand):
@@ -74,160 +185,58 @@ class McdocChecker(Reducer):
             tree = self.mc.spec.tree.get(prototype.get_argument(i).scope)
             if not tree or not tree.parser:
                 continue
-            if not (adapter := self.get_adapter(tree.parser)):
-                continue
-            value = self.to_python(argument)
-            try:
-                adapter.validate_python(value)
-            except ValidationError as exc:
-                yield from self.format_validation_error(tree.parser, exc, argument, value)
+            if mcdoc_type := MCDOC_ARGUMENT_TYPES.get(tree.parser):
+                yield from self.validate(mcdoc_type, argument)
 
-    def to_python(self, node: AstNbt) -> Any:
-        """Convert the nbt node to plain python values.
+    def validate(self, mcdoc_type: str, node: AstNbt | AstJson) -> Iterator[Diagnostic]:
+        """Validate the nbt or json node and report errors at the invalid nodes."""
+        value = node.unpack()
+        try:
+            self.get_adapter(mcdoc_type).validate_python(value)
+        except ValidationError as exc:
+            name = mcdoc_type.rsplit("::", 1)[-1]
+            issues = [ValidationIssue.from_details(details, value) for details in exc.errors()]
 
-        Unlike `AstNbt.evaluate()`, this supports heterogeneous lists, which
-        nbtlib can't represent.
-        """
-        if isinstance(node, AstNbtCompound):
-            return {entry.key.value: self.to_python(entry.value) for entry in node.entries}
-        if isinstance(node, AstNbtSequence):
-            return [self.to_python(element) for element in node.elements]
-        return node.evaluate()
+            for issue in self.best_issues(issues):
+                path, msg = issue.format()
+                path_str = "".join(quote([item]) for item in path)
+                note = f"{path_str} => {msg}" if path_str else msg
+                diagnostic = Diagnostic("error", f"Invalid {name}.", notes=[note])
+                yield set_location(diagnostic, self.find_node(node, path))
 
-    def format_validation_error(
-        self,
-        parser: str,
-        exc: ValidationError,
-        argument: AstNbt,
-        value: Any,
-    ) -> Iterator[Diagnostic]:
-        validator = MCDOC_ARGUMENT_TYPES[parser]
-        name = getattr(validator, "__name__", str(validator))
-        errors = [(details, self.data_flags(value, details)) for details in exc.errors()]
-
-        for error in self.best_errors(errors):
-            path, msg = self.format_error(*error)
-            path_str = "".join(json.dumps([item]) for item in path)
-            note = f"{path_str} => {msg}" if path_str else msg
-            diagnostic = Diagnostic("error", f"Invalid {name}.", notes=[note])
-            yield set_location(diagnostic, self.find_node(argument, path))
-
-    def find_node(self, node: AstNbt, path: list[Any]) -> AstNbt:
+    def find_node(self, node: AstNbt | AstJson, path: List[Union[str, int]]) -> AstNode:
         """Return the node at the given data path, or the deepest one that exists."""
         for item in path:
-            if isinstance(node, AstNbtCompound):
-                entries = [entry for entry in node.entries if entry.key.value == item]
-                if not entries:
-                    break
-                node = entries[-1].value
-            elif isinstance(node, AstNbtSequence) and isinstance(item, int):
-                if not 0 <= item < len(node.elements):
-                    break
-                node = node.elements[item]
-            else:
+            if (child := node.child(item)) is None:
                 break
+            node = child
         return node
 
-    def data_flags(self, value: Any, details: ErrorDetails) -> list[bool]:
-        """Tell for each item of the error location if it's a key or an index of the data.
-
-        The other items are labels that pydantic adds for union branches, like
-        "float", "tagged-union[...]" or the tag of the branch.
-        """
-        loc = details["loc"]
-        flags: list[bool] = []
-        for i, item in enumerate(loc):
-            if isinstance(value, dict) and item in value:
-                value = value[item]
-                flags.append(True)
-            elif isinstance(value, list) and isinstance(item, int) and 0 <= item < len(value):
-                value = value[item]
-                flags.append(True)
+    def best_issues(
+        self,
+        issues: List[ValidationIssue],
+        depth: int = 0,
+    ) -> List[ValidationIssue]:
+        """Only keep the issues of the union branches that match the data the best."""
+        result: List[ValidationIssue] = []
+        groups: Dict[Any, List[ValidationIssue]] = {}
+        for issue in issues:
+            if len(issue.loc) > depth:
+                groups.setdefault(issue.loc[depth], []).append(issue)
             else:
-                flags.append(details["type"] == "missing" and i == len(loc) - 1)
-        return flags
-
-    def best_errors(self, errors: list[ValidationIssue], depth: int = 0) -> list[ValidationIssue]:
-        """Only keep the errors of the union branches that match the data the best."""
-        result: list[ValidationIssue] = []
-        groups: dict[Any, list[ValidationIssue]] = {}
-        for details, flags in errors:
-            if len(details["loc"]) > depth:
-                groups.setdefault(details["loc"][depth], []).append((details, flags))
-            else:
-                result.append((details, flags))
+                result.append(issue)
 
         branches = list(groups.values())
-        if branches and not branches[0][0][1][depth]:
+        if branches and not branches[0][0].is_data(depth):
             branches = [max(branches, key=self.branch_score)]
 
         for branch in branches:
-            result.extend(self.best_errors(branch, depth + 1))
+            result.extend(self.best_issues(branch, depth + 1))
         return result
 
-    def branch_score(self, errors: list[ValidationIssue]) -> tuple[int, bool]:
+    def branch_score(self, issues: List[ValidationIssue]) -> tuple[int, bool]:
         """Prefer branches that go deeper into the data, then the ones where the type matches."""
         return (
-            max(sum(flags) for _, flags in errors),
-            not all(self.is_type_mismatch(details) for details, _ in errors),
+            max(issue.depth for issue in issues),
+            not all(issue.is_type_mismatch for issue in issues),
         )
-
-    def is_type_mismatch(self, details: ErrorDetails) -> bool:
-        if details["type"] == "literal_error":
-            return not isinstance(details["input"], (str, int, float))
-        return details["type"].endswith("_type") or details["type"] == "union_tag_not_found"
-
-    def format_error(
-        self,
-        details: ErrorDetails,
-        flags: list[bool],
-    ) -> tuple[list[Any], str]:
-        path = [item for item, is_data in zip(details["loc"], flags) if is_data]
-
-        if details["type"] == "union_tag_invalid" and "ctx" in details:
-            tag = details["ctx"]["tag"]
-            key = self.find_tag_key(details["input"], tag)
-            if key is not None:
-                path.append(key)
-            msg = f"Unknown {key or 'tag'} {json.dumps(tag)}."
-            expected = TAG_REGEX.findall(details["ctx"]["expected_tags"])
-            if suggestion := self.suggest_tag(tag, expected):
-                msg += f" Did you mean {json.dumps(suggestion)}?"
-            else:
-                patterns = tuple(json.dumps(tag) for tag in expected)
-                msg += f" Expected {explain_patterns(patterns)}."
-        else:
-            msg = details["msg"]
-            msg = msg[0].upper() + msg[1:] + "." * (not msg.endswith("."))
-            if suggestion := self.suggest_key(details):
-                msg += f" Did you misspell {json.dumps(suggestion)}?"
-
-        return path, msg
-
-    def suggest_tag(self, tag: str, expected: list[str]) -> Optional[str]:
-        """Return the expected tag that looks like a misspelling of the given tag."""
-        # Compare without the namespace, otherwise all the tags look alike
-        paths = {name.removeprefix("minecraft:"): name for name in expected}
-        matches = get_close_matches(tag.removeprefix("minecraft:"), list(paths), n=1)
-        return paths[matches[0]] if matches else None
-
-    def find_tag_key(self, compound: Any, tag: str) -> Optional[str]:
-        """Return the key of the compound that holds the tag of the tagged union."""
-        if not isinstance(compound, dict):
-            return None
-        for key, value in compound.items():
-            if isinstance(value, str) and tag in (value, f"minecraft:{value}"):
-                return key
-        return None
-
-    def suggest_key(self, details: ErrorDetails) -> Optional[str]:
-        """Return a key of the compound that looks like a misspelling of the missing field."""
-        if details["type"] != "missing" or not details["loc"]:
-            return None
-        field_name = details["loc"][-1]
-        compound = details.get("input")
-        if not isinstance(field_name, str) or not isinstance(compound, dict):
-            return None
-        keys = [key for key in compound if isinstance(key, str) and key != field_name]
-        matches = get_close_matches(field_name, keys, n=1)
-        return matches[0] if matches else None

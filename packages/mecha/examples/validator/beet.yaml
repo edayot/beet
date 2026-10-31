@@ -5,6 +5,7 @@ data_pack:
 
 require:
   - mecha.contrib.nested_resources
+  - mecha.contrib.json_files
 
 pipeline:
   - mecha

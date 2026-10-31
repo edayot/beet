@@ -33,8 +33,6 @@ from typing import (
     overload,
 )
 
-from mecha.check import McdocChecker
-
 from beet import (
     LATEST_MINECRAFT_VERSION,
     Cache,
@@ -58,6 +56,7 @@ from pydantic import BaseModel, field_validator
 from tokenstream import InvalidSyntax, Preprocessor, TokenStream, set_location
 
 from .ast import AstLiteral, AstNode, AstRoot
+from .check import McdocChecker
 from .config import CommandTree
 from .database import (
     CompilationDatabase,
@@ -182,6 +181,8 @@ class Mecha:
     optimize: Dispatcher[AstRoot] = extra_field(init=False)
     check: Dispatcher[AstRoot] = extra_field(init=False)
 
+    mcdoc: McdocChecker = extra_field(init=False)
+
     steps: List[Dispatcher[AstRoot]] = extra_field(default_factory=list)
 
     serialize: Serializer = extra_field(init=False)
@@ -254,7 +255,8 @@ class Mecha:
             self.optimize = MutatingReducer()
             self.check = Reducer()
 
-        self.check.extend(McdocChecker(self))
+        self.mcdoc = McdocChecker(self)
+        self.check.extend(self.mcdoc)
 
         self.steps.append(self.lint)
         self.steps.append(self.transform)
@@ -393,25 +395,21 @@ class Mecha:
         except InvalidSyntax as exc:
             if self.cache and filename and cache_miss:
                 self.cache.invalidate_changes(self.directory / filename)
-            d = Diagnostic(
-                level="error",
-                message=str(exc),
-                notes=exc.notes,
-                hint=resource_location,
-                filename=str(filename) if filename else None,
-                file=source,
-            )
-            inners = []
-            for e in chain.from_iterable(exc.alternatives.values()):
-                inners.append(set_location(Diagnostic(
-                    level="error",
-                    message=str(e),
-                    notes=e.notes,
-                    hint=resource_location,
-                    filename=str(filename) if filename else None,
-                    file=source,
-                ), e))
-            raise DiagnosticError(DiagnosticCollection([set_location(d, exc), *inners])) from exc
+            diagnostics = [
+                set_location(
+                    Diagnostic(
+                        level="error",
+                        message=str(e),
+                        notes=e.notes,
+                        hint=resource_location,
+                        filename=str(filename) if filename else None,
+                        file=source,
+                    ),
+                    e,
+                )
+                for e in [exc, *chain.from_iterable(exc.alternatives.values())]
+            ]
+            raise DiagnosticError(DiagnosticCollection(diagnostics)) from exc
         else:
             if self.cache and filename and cache_miss:
                 try:

@@ -1,0 +1,4 @@
+{
+    "type": "min",
+    "inputs": [1.2, 2.3, {"type": "minecraft:constant", "value": 3.4}]
+}

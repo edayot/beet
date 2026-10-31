@@ -619,6 +619,13 @@ class DataModelBase(TextFileBase[ValueType]):
 class JsonFileBase(DataModelBase[ValueType]):
     """Base class for json files."""
 
+    mcdoc_type: ClassVar[Optional[str]] = None
+    """Path of the mcdoc type describing the file, e.g. "::java::data::loot::LootTable".
+
+    It's a path rather than the generated model, so that the models are only
+    imported when the file is validated.
+    """
+
     def __post_init__(self):
         super().__post_init__()
         if not self.encoder:
