@@ -1,0 +1,5 @@
+{
+    "type": "minecraft:slot_range",
+    "source": "this",
+    "slots": "weapon"
+}

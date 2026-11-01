@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:sequence",
+    "functions": [
+        {
+            "type": "minecraft:set_item",
+            "item": "minecraft:poisonous_potato"
+        }
+    ]
+}
