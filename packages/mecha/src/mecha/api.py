@@ -124,6 +124,7 @@ class MechaOptions(BaseModel):
     rules: dict[str, Literal["ignore", "info", "warn", "error"]] = {}
     cache: bool = True
     output_perf: FileSystemPath | None = None
+    check_with_mcdoc: bool = True
 
     @field_validator("formatting", mode="before")
     @classmethod
@@ -188,6 +189,7 @@ class Mecha:
             version = opts.version or ctx.minecraft_version
             multiline = opts.multiline
             formatting = opts.formatting
+            check_with_mcdoc = opts.check_with_mcdoc
 
             if opts.readonly is not None:
                 self.readonly = opts.readonly
@@ -238,9 +240,11 @@ class Mecha:
             self.transform = MutatingReducer()
             self.optimize = MutatingReducer()
             self.check = Reducer()
+            check_with_mcdoc = True
 
         self.mcdoc = McdocChecker(self)
-        self.check.extend(self.mcdoc)
+        if check_with_mcdoc:
+            self.check.extend(self.mcdoc)
 
         self.steps.append(self.lint)
         self.steps.append(self.transform)
