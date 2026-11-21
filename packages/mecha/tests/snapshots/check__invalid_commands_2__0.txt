@@ -1,0 +1,7 @@
+data merge storage my_pack:data {players: [{name: "Alex"}]}
+---
+Invalid MyPackData. (mcdoc_validation)
+     1 |  data merge storage my_pack:data {players: [{name: "Alex"}]}
+       :                                             ^^^^^^^^^^^^^^
+Notes:
+  - ["players"][0]["coins"] => Field required.

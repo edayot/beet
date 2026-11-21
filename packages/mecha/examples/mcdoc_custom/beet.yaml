@@ -1,0 +1,11 @@
+data_pack:
+  load: .
+
+pipeline:
+  - mecha
+
+meta:
+  mecha:
+    mcdoc:
+      # The pack's own types, validated with vanilla's (exported with mcdoc-cli, so it needs Node.js)
+      sources: ["mcdoc"]

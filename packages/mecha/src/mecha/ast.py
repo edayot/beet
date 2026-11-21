@@ -90,6 +90,7 @@ __all__ = [
     "AstVibrationParticleParameters",
     "AstWildcard",
     "AstWord",
+    "NbtArrayValue",
 ]
 
 
@@ -732,6 +733,16 @@ class AstJsonObject(AstJson):
         return None
 
 
+class NbtArrayValue(list[Any]):
+    """Typed array ([B; ...], [I; ...] or [L; ...]) from `AstNbt.unpack_tagged()`."""
+
+    kind: str
+
+    def __init__(self, kind: str, elements: Iterable[Any]):
+        super().__init__(elements)
+        self.kind = kind
+
+
 @dataclass(frozen=True, slots=True)
 class AstNbt(AstNode):
     """Base ast node for nbt."""
@@ -741,6 +752,15 @@ class AstNbt(AstNode):
     def evaluate(self) -> Any:
         """Return the nbt value."""
         raise NotImplementedError()
+
+    def unpack_tagged(self) -> Any:
+        """Return the nbt value as python values that keep their tag.
+
+        Like `unpack()`, but numbers and strings are nbtlib's tags (e.g. `Byte(1)` for
+        `1b` or `true`), and typed arrays are `NbtArrayValue`, so that their tags can be
+        checked (see `McdocChecker`).
+        """
+        return self.evaluate()
 
     def unpack(self) -> Any:
         """Return the nbt value as plain python values.
@@ -854,6 +874,9 @@ class AstNbtList(AstNbt):
     def unpack(self) -> Any:
         return [element.unpack() for element in self.elements]
 
+    def unpack_tagged(self) -> Any:
+        return [element.unpack_tagged() for element in self.elements]
+
     def to_json(self) -> AstJson:
         elements = AstChildren(element.to_json() for element in self.elements)
         return set_location(AstJsonArray(elements=elements), self)
@@ -895,6 +918,9 @@ class AstNbtCompound(AstNbt):
     def unpack(self) -> Any:
         return {entry.key.value: entry.value.unpack() for entry in self.entries}
 
+    def unpack_tagged(self) -> Any:
+        return {entry.key.value: entry.value.unpack_tagged() for entry in self.entries}
+
     def to_json(self) -> AstJson:
         entries = AstChildren(
             set_location(
@@ -930,6 +956,11 @@ class AstNbtByteArray(AstNbt):
     def evaluate(self) -> Any:
         return ByteArray([element.evaluate() for element in self.elements])
 
+    def unpack_tagged(self) -> Any:
+        return NbtArrayValue(
+            "byte_array", (element.unpack_tagged() for element in self.elements)
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class AstNbtIntArray(AstNbt):
@@ -943,6 +974,11 @@ class AstNbtIntArray(AstNbt):
     def evaluate(self) -> Any:
         return IntArray([element.evaluate() for element in self.elements])
 
+    def unpack_tagged(self) -> Any:
+        return NbtArrayValue(
+            "int_array", (element.unpack_tagged() for element in self.elements)
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class AstNbtLongArray(AstNbt):
@@ -955,6 +991,11 @@ class AstNbtLongArray(AstNbt):
 
     def evaluate(self) -> Any:
         return LongArray([element.evaluate() for element in self.elements])
+
+    def unpack_tagged(self) -> Any:
+        return NbtArrayValue(
+            "long_array", (element.unpack_tagged() for element in self.elements)
+        )
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,0 +1,7 @@
+compute default float {type: "maxx", inputs: [1.2]}
+---
+Invalid ContextFloatProvider. (mcdoc_validation)
+     1 |  compute default float {type: "maxx", inputs: [1.2]}
+       :                               ^^^^^^
+Notes:
+  - ["type"] => Unknown type "minecraft:maxx". Did you mean "minecraft:max"?

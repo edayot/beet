@@ -1,0 +1,7 @@
+summon zombie ~ ~ ~ {Health: "full"}
+---
+Invalid Zombie. (mcdoc_validation)
+     1 |  summon zombie ~ ~ ~ {Health: "full"}
+       :                               ^^^^^^
+Notes:
+  - ["Health"] => Expected a number (float), got a string tag.

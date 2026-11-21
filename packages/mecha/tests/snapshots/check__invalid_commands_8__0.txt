@@ -1,0 +1,7 @@
+summon zombie ~ ~ ~ {CanBreakDoors: "yes"}
+---
+Invalid Zombie. (mcdoc_validation)
+     1 |  summon zombie ~ ~ ~ {CanBreakDoors: "yes"}
+       :                                      ^^^^^
+Notes:
+  - ["CanBreakDoors"] => Expected a boolean (0b or 1b), got a string tag.

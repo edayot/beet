@@ -1,0 +1,7 @@
+data merge storage my_pack:data {round: 11}
+---
+Invalid MyPackData. (mcdoc_validation)
+     1 |  data merge storage my_pack:data {round: 11}
+       :                                          ^^
+Notes:
+  - ["round"] => Input should be less than or equal to 10.

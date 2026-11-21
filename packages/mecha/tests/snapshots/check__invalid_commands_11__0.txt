@@ -1,0 +1,7 @@
+setblock ~ ~ ~ chest{Items: 3}
+---
+Invalid Container27. (mcdoc_validation)
+     1 |  setblock ~ ~ ~ chest{Items: 3}
+       :                              ^
+Notes:
+  - ["Items"] => Input should be a valid list.

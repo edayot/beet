@@ -1,0 +1,7 @@
+function my_pack:give_coins {reason: "No amount"}
+---
+Invalid GiveCoins. (mcdoc_validation)
+     1 |  function my_pack:give_coins {reason: "No amount"}
+       :                              ^^^^^^^^^^^^^^^^^^^^^
+Notes:
+  - ["amount"] => Field required.

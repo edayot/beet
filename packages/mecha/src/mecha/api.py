@@ -112,6 +112,15 @@ FORMATTING_PRESETS: dict[str, JsonDict] = {
 }
 
 
+class McdocOptions(BaseModel):
+    """The project's own mcdoc, validated against with vanilla's (e.g. its storages' types)."""
+
+    sources: ListOption[FileSystemPath] = ListOption()
+    """Files or folders of .mcdoc files, exported with mcdoc-cli (needs Node.js)."""
+    symbols: FileSystemPath | None = None
+    """Or a symbols.json that mcdoc-cli has already exported, with vanilla's types."""
+
+
 class MechaOptions(BaseModel):
     """Mecha options."""
 
@@ -125,6 +134,7 @@ class MechaOptions(BaseModel):
     cache: bool = True
     output_perf: FileSystemPath | None = None
     check_with_mcdoc: bool = True
+    mcdoc: McdocOptions = McdocOptions()
 
     @field_validator("formatting", mode="before")
     @classmethod
@@ -192,6 +202,11 @@ class Mecha:
             check_with_mcdoc = opts.check_with_mcdoc
             # Where vanilla_mcdoc generates the models of a version that isn't installed
             mcdoc_cache_dir = ctx.cache["mcdoc"].directory
+            # The project's own mcdoc, relative to it
+            mcdoc_sources = [ctx.directory / p for p in opts.mcdoc.sources.entries()]
+            mcdoc_symbols = (
+                ctx.directory / opts.mcdoc.symbols if opts.mcdoc.symbols else None
+            )
 
             if opts.readonly is not None:
                 self.readonly = opts.readonly
@@ -244,8 +259,12 @@ class Mecha:
             self.check = Reducer()
             check_with_mcdoc = True
             mcdoc_cache_dir = None
+            mcdoc_sources = []
+            mcdoc_symbols = None
 
         self.mcdoc = McdocChecker(self, version, mcdoc_cache_dir)
+        self.mcdoc.sources.extend(mcdoc_sources)
+        self.mcdoc.symbols = mcdoc_symbols
         if check_with_mcdoc:
             self.check.extend(self.mcdoc)
 

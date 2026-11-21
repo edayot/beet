@@ -1,0 +1,22 @@
+// What the pack keeps in its storage, and the arguments of its macro functions.
+// The file's path is its module: this is ::my_pack::storage.
+
+use ::java::world::item::ItemStack
+
+struct PlayerData {
+	/// How many coins the player has.
+	coins: int @ 0..,
+	name?: string,
+	vip?: boolean,
+	inventory?: [ItemStack],
+}
+
+dispatch minecraft:storage[my_pack:data] to struct {
+	players?: [PlayerData],
+	round?: int @ 1..10,
+}
+
+dispatch minecraft:macro_function[my_pack:give_coins] to struct GiveCoins {
+	amount: int @ 1..,
+	reason?: string,
+}

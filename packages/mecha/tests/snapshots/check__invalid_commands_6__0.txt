@@ -1,0 +1,7 @@
+function my_pack:give_coins {amount: "lots"}
+---
+Invalid GiveCoins. (mcdoc_validation)
+     1 |  function my_pack:give_coins {amount: "lots"}
+       :                                       ^^^^^^
+Notes:
+  - ["amount"] => Expected an integer (int), got a string tag.

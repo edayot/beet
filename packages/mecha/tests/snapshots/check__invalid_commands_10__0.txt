@@ -1,0 +1,7 @@
+kill @e[type=zombie,nbt={CanBreakDoors: 1}]
+---
+Invalid Zombie. (mcdoc_validation)
+     1 |  kill @e[type=zombie,nbt={CanBreakDoors: 1}]
+       :                                          ^
+Notes:
+  - ["CanBreakDoors"] => Expected a byte tag, got an int tag.

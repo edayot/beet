@@ -1,0 +1,7 @@
+data merge storage my_pack:data {players: [{coins: -5}]}
+---
+Invalid MyPackData. (mcdoc_validation)
+     1 |  data merge storage my_pack:data {players: [{coins: -5}]}
+       :                                                     ^^
+Notes:
+  - ["players"][0]["coins"] => Input should be greater than or equal to 0.

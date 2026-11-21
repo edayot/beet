@@ -1,0 +1,7 @@
+data merge storage my_pack:data {players: [{coins: 3, vip: "yes"}]}
+---
+Invalid MyPackData. (mcdoc_validation)
+     1 |  data merge storage my_pack:data {players: [{coins: 3, vip: "yes"}]}
+       :                                                             ^^^^^
+Notes:
+  - ["players"][0]["vip"] => Expected a boolean (0b or 1b), got a string tag.

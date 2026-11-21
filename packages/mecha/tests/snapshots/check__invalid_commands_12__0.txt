@@ -1,0 +1,7 @@
+give @s diamond_sword[damage="a lot"]
+---
+Invalid Damage. (mcdoc_validation)
+     1 |  give @s diamond_sword[damage="a lot"]
+       :                               ^^^^^^^
+Notes:
+  - Expected an integer (int), got a string tag.

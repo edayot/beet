@@ -1,0 +1,7 @@
+data merge storage my_pack:data {players: [{coins: 1.5f}]}
+---
+Invalid MyPackData. (mcdoc_validation)
+     1 |  data merge storage my_pack:data {players: [{coins: 1.5f}]}
+       :                                                     ^^^^
+Notes:
+  - ["players"][0]["coins"] => Expected an integer (int), got a float tag.

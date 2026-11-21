@@ -1,0 +1,7 @@
+data merge storage my_pack:data {players: [{coins: 0, inventory: [{id: "minecraft:stone", count: "three"}]}]}
+---
+Invalid MyPackData. (mcdoc_validation)
+     1 |  data merge storage my_pack:data {players: [{coins: 0, inventory: [{id: "minecraft:stone", count: "three"}]}]}
+       :                                                                                                   ^^^^^^^
+Notes:
+  - ["players"][0]["inventory"][0]["count"] => Expected an integer (int), got a string tag.
