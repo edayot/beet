@@ -1,25 +1,23 @@
 __all__ = [
-    "MCDOC_ARGUMENT_TYPES",
     "McdocChecker",
     "ValidationIssue",
-    "resolve_mcdoc_type",
-    "select_mcdoc_type",
 ]
 
 
 import json
+import logging
 import re
 from collections.abc import Iterator
 from dataclasses import dataclass
 from difflib import get_close_matches
-from importlib import import_module
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pydantic import TypeAdapter, ValidationError
 from pydantic_core import ErrorDetails
 from tokenstream import explain_patterns, set_location
+from vanilla_mcdoc import VersionModels, load
 
-from beet.core.file import McDocResolvable
 from beet.core.utils import VersionNumber, split_version
 
 from .ast import AstCommand, AstJson, AstNbt, AstNode
@@ -30,48 +28,9 @@ if TYPE_CHECKING:
     from .api import Mecha
 
 
-
-MCDOC_ARGUMENT_TYPES: dict[str, McDocResolvable] = {
-    "minecraft:context_float_provider": "::vanilla_mcdoc::java::data::number_provider::FloatNumberProvider",
-    "minecraft:context_int_provider": "::vanilla_mcdoc::java::data::number_provider::IntNumberProvider",
-}
+logger = logging.getLogger("mecha")
 
 TAG_REGEX = re.compile(r"'([^']*)'")
-
-
-def resolve_mcdoc_type(path: str, minecraft_version: str) -> Any:
-    """Import the vanilla_mcdoc model of the given mcdoc path.
-
-    For example "::vanilla_mcdoc::java::data::loot::LootTable" resolves to the `LootTable` type
-    of the `vanilla_mcdoc.data.loot.LootTable` module.
-    """
-    _, module_name, path = path.split("::", 2)
-    parts = path.removeprefix("java::").split("::")
-    module = import_module(".".join([module_name, *parts]))
-    return getattr(module, parts[-1])
-
-
-def select_mcdoc_type(mcdoc_type: McDocResolvable, version: VersionNumber) -> str:
-    """Return the mcdoc type to use for the given minecraft version.
-
-    Each type of the dict applies up to its version, so this picks the earliest one that covers
-    the given version.
-    """
-    if isinstance(mcdoc_type, str):
-        return mcdoc_type
-
-    version = split_version(version)
-    matching = [
-        (split_version(mc_version), value)
-        for mc_version, value in mcdoc_type.items()
-        if split_version(mc_version) >= version
-    ]
-    if not matching:
-        raise ValueError(
-            f"No mcdoc type for Minecraft {'.'.join(map(str, version))} "
-            f"(only defined up to {max(mcdoc_type, key=split_version)})."
-        )
-    return min(matching)[1]
 
 
 def quote(value: Any) -> str:
@@ -191,27 +150,60 @@ class ValidationIssue:
 
 
 class McdocChecker(Reducer):
-    """Checker that validates nbt and json values against their mcdoc type."""
+    """Checker that validates nbt and json values against their mcdoc type.
+
+    The types come from vanilla_mcdoc: the models of the minecraft version, installed
+    (`vanilla-mcdoc[26.3]`) or generated in `cache_dir` the first time they're needed.
+    """
 
     mc: Mecha
+    minecraft_version: VersionNumber
+    cache_dir: Path | None
     adapters: dict[str, TypeAdapter[Any]]
-    minecraft_version: str
+    _models: VersionModels | None | bool
 
-    def __init__(self, mc: Mecha):
+    def __init__(
+        self, mc: Mecha, minecraft_version: VersionNumber, cache_dir: Path | None = None
+    ):
         super().__init__()
         self.mc = mc
-        self.minecraft_version = mc.version # pyright: ignore[reportAttributeAccessIssue]
+        self.minecraft_version = minecraft_version
+        self.cache_dir = cache_dir
         self.adapters = {}
+        self._models = False
 
-    def get_adapter(self, mcdoc_type: str) -> TypeAdapter[Any]:
+    def get_models(self) -> VersionModels | None:
+        """The models of the minecraft version, or None if there are none (then nothing is validated).
+
+        Loaded the first time, as a version that isn't installed is generated then.
+        """
+        if self._models is False:
+            try:
+                self._models = load(
+                    self.minecraft_version
+                    if isinstance(self.minecraft_version, str)
+                    else split_version(self.minecraft_version),
+                    cache_dir=self.cache_dir,
+                )
+            except LookupError as exc:
+                logger.warning("No mcdoc validation: %s", exc)
+                self._models = None
+        return self._models  # pyright: ignore[reportReturnType]
+
+    def get_adapter(self, mcdoc_type: str) -> TypeAdapter[Any] | None:
         if mcdoc_type not in self.adapters:
-            self.adapters[mcdoc_type] = TypeAdapter(resolve_mcdoc_type(mcdoc_type, self.minecraft_version))
+            if not (models := self.get_models()):
+                return None
+            try:
+                self.adapters[mcdoc_type] = TypeAdapter(models.load_symbol(mcdoc_type))
+            except LookupError:
+                return None
         return self.adapters[mcdoc_type]
 
     @rule(AstCommand)
     def mcdoc_validation(self, node: AstCommand):
         prototype = self.mc.spec.prototypes.get(node.identifier)
-        if not prototype:
+        if not prototype or not (models := self.get_models()):
             return
 
         for i, argument in enumerate(node.arguments):
@@ -220,15 +212,17 @@ class McdocChecker(Reducer):
             tree = self.mc.spec.tree.get(prototype.get_argument(i).scope)
             if not tree or not tree.parser:
                 continue
-            if mcdoc_type := MCDOC_ARGUMENT_TYPES.get(tree.parser):
+            if mcdoc_type := models.argument_symbol(tree.parser):
                 yield from self.validate(mcdoc_type, argument)
 
-    def validate(self, mcdoc_type: McDocResolvable, node: AstNbt | AstJson) -> Iterator[Diagnostic]:
-        """Validate the nbt or json node and report errors at the invalid nodes."""
-        mcdoc_type = select_mcdoc_type(mcdoc_type, self.minecraft_version) 
+    def validate(self, mcdoc_type: str, node: AstNbt | AstJson) -> Iterator[Diagnostic]:
+        """Validate the nbt or json node against the mcdoc type (e.g. "::java::data::loot::LootTable")
+        and report errors at the invalid nodes."""
+        if not (adapter := self.get_adapter(mcdoc_type)):
+            return
         value = node.unpack()
         try:
-            self.get_adapter(mcdoc_type).validate_python(value)
+            adapter.validate_python(value)
         except ValidationError as exc:
             name = mcdoc_type.rsplit("::", 1)[-1]
             issues = [

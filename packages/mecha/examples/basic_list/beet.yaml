@@ -10,3 +10,5 @@ pipeline:
 meta:
   mecha:
     multiline: true
+    rules:
+      mcdoc_validation: warn  # Its predicates and item modifiers are written for older versions

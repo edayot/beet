@@ -21,6 +21,7 @@ from tokenstream import TokenStream, set_location
 
 from beet import Context, DataPack, JsonFileBase, ResourcePack
 from beet.core.utils import required_field
+from beet.library.base import list_input_scopes
 
 from mecha import (
     AstChildren,
@@ -226,7 +227,11 @@ class JsonFileHandler(Visitor):
 
 @dataclass
 class JsonFileChecker(Reducer):
-    """Checker that validates json files against their mcdoc type."""
+    """Checker that validates json files against their mcdoc type.
+
+    The type is the file type's `mcdoc_type` if it has one, otherwise the one of its
+    folder in the minecraft version (e.g. a loot table for the files in loot_table/).
+    """
 
     mc: Mecha = required_field()
 
@@ -237,6 +242,25 @@ class JsonFileChecker(Reducer):
             return
         if not node.arguments or not isinstance(content := node.arguments[0], AstJson):
             return
-        file_type = type(self.mc.database.current)
-        if mcdoc_type := getattr(file_type, "mcdoc_type", None):
+        if mcdoc_type := self.mcdoc_type(self.mc.database.current):
             yield from self.mc.mcdoc.validate(mcdoc_type, content)
+
+    def mcdoc_type(self, target: Any) -> str | None:
+        file_type = type(target)
+        if mcdoc_type := getattr(file_type, "mcdoc_type", None):
+            return mcdoc_type
+        if not (models := self.mc.mcdoc.get_models()):
+            return None
+        pack = self.mc.database[target].pack if target in self.mc.database else None
+        pack_kinds = (
+            ["data"]
+            if isinstance(pack, DataPack)
+            else ["assets"]
+            if pack
+            else ["data", "assets"]
+        )
+        for pack_kind in pack_kinds:
+            for scope in list_input_scopes(file_type.scope):
+                if mcdoc_type := models.resource_symbol(pack_kind, "/".join(scope)):  # pyright: ignore[reportArgumentType]
+                    return mcdoc_type
+        return None

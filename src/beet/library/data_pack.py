@@ -101,7 +101,6 @@ from beet.core.file import (
     BinaryFileContent,
     FileDeserialize,
     JsonFile,
-    McDocResolvable,
     TextFileBase,
     TextFileContent,
 )
@@ -210,9 +209,6 @@ class ContextIntProvider(JsonFile):
 
     scope: ClassVar[NamespaceFileScope] = ("context_int_provider",)
     extension: ClassVar[str] = ".json"
-    mcdoc_type: ClassVar[McDocResolvable | None] = (
-        "::vanilla_mcdoc::java::data::number_provider::context_int::ContextIntProvider"
-    )
 
 
 class ContextFloatProvider(JsonFile):
@@ -220,9 +216,6 @@ class ContextFloatProvider(JsonFile):
 
     scope: ClassVar[NamespaceFileScope] = ("context_float_provider",)
     extension: ClassVar[str] = ".json"
-    mcdoc_type: ClassVar[McDocResolvable | None] = (
-        "::vanilla_mcdoc::java::data::number_provider::context_float::ContextFloatProvider"
-    )
 
 
 class DecoratedPotPattern(JsonFile):

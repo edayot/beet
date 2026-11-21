@@ -190,6 +190,8 @@ class Mecha:
             multiline = opts.multiline
             formatting = opts.formatting
             check_with_mcdoc = opts.check_with_mcdoc
+            # Where vanilla_mcdoc generates the models of a version that isn't installed
+            mcdoc_cache_dir = ctx.cache["mcdoc"].directory
 
             if opts.readonly is not None:
                 self.readonly = opts.readonly
@@ -241,8 +243,9 @@ class Mecha:
             self.optimize = MutatingReducer()
             self.check = Reducer()
             check_with_mcdoc = True
+            mcdoc_cache_dir = None
 
-        self.mcdoc = McdocChecker(self)
+        self.mcdoc = McdocChecker(self, version, mcdoc_cache_dir)
         if check_with_mcdoc:
             self.check.extend(self.mcdoc)
 

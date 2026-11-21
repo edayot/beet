@@ -6,3 +6,7 @@ data_pack:
   load: "src"
 pipeline:
   - mecha
+meta:
+  mecha:
+    rules:
+      mcdoc_validation: warn  # Its loot tables are written for older versions (an entry's `name` is `value` since 1.20.5)

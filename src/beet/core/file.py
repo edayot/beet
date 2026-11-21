@@ -601,12 +601,11 @@ class DataModelBase[ValueType: Any](TextFileBase[ValueType]):
     def default(cls) -> ValueType:
         return cls.model() if cls.model and issubclass(cls.model, BaseModel) else {}  # pyright: ignore[reportReturnType]
 
-type McDocResolvable = str | dict[str, str]
 
 class JsonFileBase[ValueType: Any](DataModelBase[ValueType]):
     """Base class for json files."""
 
-    mcdoc_type: ClassVar[McDocResolvable | None] = None
+    mcdoc_type: ClassVar[str | None] = None
     """Path of the mcdoc type describing the file, e.g. "::java::data::loot::LootTable".
 
     It's a path rather than the generated model, so that the models are only
