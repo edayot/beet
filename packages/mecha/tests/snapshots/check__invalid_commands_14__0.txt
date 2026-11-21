@@ -1,0 +1,7 @@
+data modify storage my_pack:data players[0].coins set value -1
+---
+Invalid MyPackData. (mcdoc_validation)
+     1 |  data modify storage my_pack:data players[0].coins set value -1
+       :                                                              ^^
+Notes:
+  - ["players"][0]["coins"] => Input should be greater than or equal to 0.

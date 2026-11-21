@@ -7,7 +7,7 @@ __all__ = [
 import json
 import logging
 import re
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from difflib import get_close_matches
 from pathlib import Path
@@ -33,6 +33,9 @@ from .ast import (
     AstJson,
     AstNbt,
     AstNbtCompound,
+    AstNbtPath,
+    AstNbtPathKey,
+    AstNbtPathSubscript,
     AstNode,
     AstResourceLocation,
     AstSelector,
@@ -69,6 +72,32 @@ NBT_TARGETS: dict[str, tuple[str, int | None, bool]] = {
     "data:merge:storage:target:nbt": ("minecraft:storage", 0, True),
     "function:name:arguments": ("minecraft:macro_function", 0, False),
 }
+
+# e.g. data:modify:storage:target:targetPath:set:value:value, whose value is put at the path
+DATA_MODIFY_REGEX = re.compile(
+    r"data:modify:(entity|block|storage):target:targetPath:"
+    r"(set|merge|append|prepend|insert)(?::index)?:value:value"
+)
+
+
+def nbt_path_prefix(path: AstNbtPath) -> list[str | int]:
+    """The keys and indices of an nbt path, e.g. ["players", 0, "coins"] for
+    `players[0].coins`. Any element (`[]`, `[-1]` or `[{...}]`) is 0, as they're all
+    the same type, and the compounds filtering a key are left out."""
+    prefix: list[str | int] = []
+    for component in path.components:
+        if isinstance(component, AstNbtPathKey):
+            prefix.append(component.value)
+        elif isinstance(component, AstNbtPathSubscript):
+            prefix.append(0)
+    return prefix
+
+
+def embed(value: Any, prefix: Sequence[str | int]) -> Any:
+    """The value inside compounds and lists, at the path, e.g. {"a": [3]} for ["a", 0]."""
+    for item in reversed(prefix):
+        value = [value] if isinstance(item, int) else {item: value}
+    return value
 
 
 def nbt_kind(value: Any) -> str | None:
@@ -312,11 +341,40 @@ class McdocChecker(Reducer):
             elif isinstance(argument, AstNbt):
                 if parser and (mcdoc_type := models.argument_symbol(parser)):
                     yield from self.validate(mcdoc_type, argument)
+                elif match := DATA_MODIFY_REGEX.fullmatch(node.identifier):
+                    yield from self.validate_data_modify(models, node, match, argument)
                 elif target := NBT_TARGETS.get(node.identifier):
                     registry, index, partial = target
                     key = None if index is None else dispatch_key(node.arguments[index])
                     if key and (mcdoc_type := models.dispatcher_symbol(registry, key)):
                         yield from self.validate(mcdoc_type, argument, partial=partial)
+
+    def validate_data_modify(
+        self,
+        models: VersionModels,
+        node: AstCommand,
+        match: re.Match[str],
+        value: AstNbt,
+    ) -> Iterator[Diagnostic]:
+        """The value is validated where it's put, in the entity, block or storage: whole
+        for set, merged for merge, and as an element of the list for the others."""
+        kind, operation = match.groups()
+        target, path = node.arguments[0], node.arguments[1]
+        key = dispatch_key(target) if kind != "block" else None
+        if not key or not isinstance(path, AstNbtPath):
+            return
+        if not (mcdoc_type := models.dispatcher_symbol(f"minecraft:{kind}", key)):
+            return
+        prefix = nbt_path_prefix(path)
+        if operation in ("append", "prepend", "insert"):
+            prefix.append(0)
+        yield from self.validate(
+            mcdoc_type,
+            value,
+            partial=operation == "merge",
+            prefix=prefix,
+            prefix_node=path,
+        )
 
     def validate_selector(
         self, models: VersionModels, selector: AstSelector
@@ -381,20 +439,24 @@ class McdocChecker(Reducer):
         node: AstNbt | AstJson,
         exact: bool = False,
         partial: bool = False,
+        prefix: Sequence[str | int] = (),
+        prefix_node: AstNode | None = None,
     ) -> Iterator[Diagnostic]:
         """Validate the nbt or json node against the mcdoc type (e.g. "::java::data::loot::LootTable")
         and report errors at the invalid nodes.
 
         The tags of nbt are checked too, and with `exact` (in a predicate) they have to be the
         field's own. With `partial` (e.g. data merge), the fields of compounds can be missing.
+        With a `prefix`, the value is only what's at that path (e.g. data modify), so the
+        fields of what it's in can be missing, and errors before it are at `prefix_node`.
         """
         if not (adapter := self.get_adapter(mcdoc_type)):
             return
         if isinstance(node, AstNbt):
-            value = node.unpack_tagged()
+            value = embed(node.unpack_tagged(), prefix)
             context = {"nbt_kind": nbt_kind, "nbt_exact": exact}
         else:
-            value = node.unpack()
+            value = embed(node.unpack(), prefix)
             context = None
         try:
             adapter.validate_python(value, context=context)
@@ -403,21 +465,35 @@ class McdocChecker(Reducer):
             issues = [
                 ValidationIssue.from_details(details, value) for details in exc.errors()
             ]
-            if partial:
-                # In a list, the items are whole, as lists are replaced rather than merged
-                issues = [
-                    issue
-                    for issue in issues
-                    if issue.type != "missing"
-                    or any(isinstance(item, int) for item in issue.path)
-                ]
+            issues = [
+                issue for issue in issues if self.reported(issue, partial, prefix)
+            ]
 
             for issue in self.best_issues(issues):
                 path, msg = issue.format()
                 path_str = "".join(quote([item]) for item in path)
                 note = f"{path_str} => {msg}" if path_str else msg
                 diagnostic = Diagnostic("error", f"Invalid {name}.", notes=[note])
-                yield set_location(diagnostic, self.find_node(node, path))
+                if len(path) < len(prefix) and prefix_node:
+                    location = prefix_node  # Something the path goes through, e.g. an int it indexes
+                else:
+                    location = self.find_node(node, path[len(prefix) :])
+                yield set_location(diagnostic, location)
+
+    def reported(
+        self, issue: ValidationIssue, partial: bool, prefix: Sequence[str | int]
+    ) -> bool:
+        """Missing fields aren't errors in what the value is put in (the prefix), or in its
+        compounds if it's `partial`. In a list, the items are whole, as lists are replaced
+        rather than merged."""
+        if issue.type != "missing":
+            return True
+        compound = issue.path[:-1]
+        if len(compound) < len(prefix):
+            return False
+        return not partial or any(
+            isinstance(item, int) for item in compound[len(prefix) :]
+        )
 
     def find_node(self, node: AstNbt | AstJson, path: list[str | int]) -> AstNode:
         """Return the node at the given data path, or the deepest one that exists."""

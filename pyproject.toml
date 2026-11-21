@@ -31,7 +31,7 @@ dependencies = [
     "pydantic>=2.14.1",
     "pyyaml>=6.0.3",
     "toml>=0.10.2",
-    "vanilla-mcdoc>=26.3.0.post1",
+    "vanilla-mcdoc>=1.0.0",  # The generator and runtime: Minecraft versions that aren't installed (vanilla-mcdoc[26.3]) are generated in the cache
 ]
 
 classifiers = [
@@ -70,6 +70,10 @@ override-dependencies = ["click>=8.3.1"]
 
 [tool.uv.workspace]
 members = ["packages/*"]
+
+# Until vanilla-mcdoc 1.0 (the generator and runtime, with a distribution per Minecraft version) is on PyPI
+[tool.uv.sources]
+vanilla-mcdoc = { git = "https://github.com/edayot/vanilla_mcdoc_to_python", branch = "multi_version" }
 
 [tool.pytest]
 addopts = ["tests", "--import-mode=importlib"]

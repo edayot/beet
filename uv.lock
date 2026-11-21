@@ -76,7 +76,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.14.1" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "toml", specifier = ">=0.10.2" },
-    { name = "vanilla-mcdoc", specifier = ">=26.3.0.post1" },
+    { name = "vanilla-mcdoc", git = "https://github.com/edayot/vanilla_mcdoc_to_python?branch=multi_version" },
 ]
 
 [package.metadata.requires-dev]
@@ -1072,14 +1072,10 @@ wheels = [
 
 [[package]]
 name = "vanilla-mcdoc"
-version = "26.3.0.post2"
-source = { registry = "https://pypi.org/simple" }
+version = "1.0.0"
+source = { git = "https://github.com/edayot/vanilla_mcdoc_to_python?branch=multi_version#8b9d0ff0bed2f25396debc1e193d06922aba8531" }
 dependencies = [
     { name = "pydantic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/31/04/91a03004fe9581196ff93a5439686b6af62df985fd7bd49d633300b5d2cc/vanilla_mcdoc-26.3.0.post2.tar.gz", hash = "sha256:7723e5f8e2b7f8e9e675d18035ba42941816536de0f142521af609a40637c6e1", size = 850681, upload-time = "2026-10-19T10:52:58.942Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/65/59/a367fc9979270e5a8a45b95962e636d95190a290db7590ac1e52c7eec42b/vanilla_mcdoc-26.3.0.post2-py3-none-any.whl", hash = "sha256:65330e3ef69658f031076401185385001e09c590d8f7d1d8de9900b12f649407", size = 1831414, upload-time = "2026-10-19T10:52:57.21Z" },
 ]
 
 [[package]]

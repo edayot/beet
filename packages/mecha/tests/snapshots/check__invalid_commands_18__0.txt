@@ -1,0 +1,7 @@
+data modify storage my_pack:data round[0] set value 1
+---
+Invalid MyPackData. (mcdoc_validation)
+     1 |  data modify storage my_pack:data round[0] set value 1
+       :                                   ^^^^^^^^
+Notes:
+  - ["round"] => Expected an integer (int), got a list tag.

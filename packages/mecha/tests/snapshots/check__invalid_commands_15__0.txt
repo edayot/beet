@@ -1,0 +1,7 @@
+data modify storage my_pack:data players append value {name: "No coins"}
+---
+Invalid MyPackData. (mcdoc_validation)
+     1 |  data modify storage my_pack:data players append value {name: "No coins"}
+       :                                                        ^^^^^^^^^^^^^^^^^^
+Notes:
+  - ["players"][0]["coins"] => Field required.

@@ -1,0 +1,7 @@
+data modify entity @e[type=zombie,limit=1] CanBreakDoors set value "yes"
+---
+Invalid Zombie. (mcdoc_validation)
+     1 |  data modify entity @e[type=zombie,limit=1] CanBreakDoors set value "yes"
+       :                                                                     ^^^^^
+Notes:
+  - ["CanBreakDoors"] => Expected a boolean (0b or 1b), got a string tag.

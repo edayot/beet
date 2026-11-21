@@ -1,0 +1,7 @@
+data modify storage my_pack:data players[0] merge value {vip: 2b}
+---
+Invalid MyPackData. (mcdoc_validation)
+     1 |  data modify storage my_pack:data players[0] merge value {vip: 2b}
+       :                                                                ^^
+Notes:
+  - ["players"][0]["vip"] => Expected a boolean (0b or 1b), got 2.

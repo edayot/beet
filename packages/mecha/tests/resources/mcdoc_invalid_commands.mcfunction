@@ -25,3 +25,15 @@ setblock ~ ~ ~ chest{Items: 3}
 give @s diamond_sword[damage="a lot"]
 
 compute default float {type: "maxx", inputs: [1.2]}
+
+data modify storage my_pack:data players[0].coins set value -1
+
+data modify storage my_pack:data players append value {name: "No coins"}
+
+data modify storage my_pack:data players[0] merge value {vip: 2b}
+
+data modify storage my_pack:data round set value "first"
+
+data modify storage my_pack:data round[0] set value 1
+
+data modify entity @e[type=zombie,limit=1] CanBreakDoors set value "yes"
